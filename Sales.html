@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Player｜销售端</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+
+<style>
+body { font-family: sans-serif; padding: 16px; }
+h2 { margin-bottom: 8px; }
+input, textarea, select { width: 100%; margin-bottom: 8px; padding: 6px; }
+button { padding: 8px 12px; margin-right: 6px; }
+table { width:100%; border-collapse: collapse; margin-top:12px; }
+td, th { border:1px solid #ddd; padding:6px; font-size:13px; }
+small { color:#666; }
+</style>
+</head>
+
+<body>
+
+<h2>Pro Player · 销售端</h2>
+
+<div id="loginBox">
+  <input id="account" placeholder="销售账号">
+  <button onclick="login()">进入</button>
+</div>
+
+<div id="main" style="display:none">
+
+<h3>新建订单</h3>
+<input id="receiver" placeholder="收件人姓名">
+<input id="contact" placeholder="联系方式">
+<textarea id="address" placeholder="地址"></textarea>
+
+<select id="style">
+  <option>A款粗</option>
+  <option>B款细</option>
+  <option>A+B</option>
+</select>
+<input id="qty" type="number" value="1" min="1">
+
+<textarea id="remarks" placeholder="备注"></textarea>
+
+<button onclick="createOrder()">提交订单</button>
+
+<hr>
+
+<h3>我的订单</h3>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>款式</th>
+<th>数量</th>
+<th>操作</th>
+</tr>
+</thead>
+<tbody id="orderList"></tbody>
+</table>
+
+</div>
+
+<script>
+const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = "";
+
+function now() {
+  return new Date().toLocaleString("zh-CN", { hour12:false });
+}
+
+function login() {
+  currentUser = account.value.trim();
+  if (!currentUser) return alert("请输入账号");
+  loginBox.style.display = "none";
+  main.style.display = "block";
+  loadOrders();
+}
+
+async function createOrder() {
+  const items = [{ name: style.value, qty: Number(qty.value) }];
+  const total = items[0].qty;
+  const sale = total === 1 ? 89 : total === 2 ? 160 : 160 + (total - 2) * 89;
+
+  await supabase.from("orders").insert({
+    account: currentUser,
+    receiver_name: receiver.value,
+    contact: contact.value,
+    address: address.value,
+    items,
+    qty: total,
+    sale_price: sale,
+    internal_price: total * 45,
+    remarks: remarks.value
+  });
+
+  receiver.value = contact.value = address.value = remarks.value = "";
+  qty.value = 1;
+  loadOrders();
+}
+
+async function loadOrders() {
+  const { data } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("account", currentUser)
+    .order("created_at", { ascending: false });
+
+  orderList.innerHTML = "";
+  data.forEach(o => {
+    orderList.innerHTML += `
+    <tr>
+      <td>${o.created_at}</td>
+      <td>${o.items[0].name}</td>
+      <td>${o.qty}</td>
+      <td>
+        <button onclick="deleteOrder('${o.id}')">删除</button>
+      </td>
+    </tr>`;
+  });
+}
+
+async function deleteOrder(id) {
+  if (!confirm("确认删除？")) return;
+
+  await supabase.from("orders")
+    .update({
+      remarks: "【删除】" + now() + " 操作人：" + currentUser
+    })
+    .eq("id", id);
+
+  await supabase.from("orders").delete().eq("id", id);
+  loadOrders();
+}
+</script>
+
+<footer>
+<hr>
+<small>
+© Pro Player<br>
+销售系统制作人：Mars-老刘 & ChatGPT<br>
+版本 v3.0 ｜ 更新时间：2026-01-14 23:18:00
+</small>
+</footer>
+
+</body>
+</html>
