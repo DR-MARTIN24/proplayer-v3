@@ -4,93 +4,146 @@
   <meta charset="UTF-8" />
   <title>Pro Player · 销售端 v4.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
+
   <style>
-    body { font-family: system-ui; padding: 20px; }
-    input, button { padding: 8px; margin: 6px 0; width: 100%; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      padding: 20px;
+      max-width: 480px;
+      margin: auto;
+    }
+    h2 { margin-bottom: 10px; }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      font-size: 16px;
+    }
+    button {
+      background: #000;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
     .hidden { display: none; }
+    ul { padding-left: 18px; }
   </style>
 </head>
+
 <body>
 
 <h2>Pro Player 销售系统</h2>
 
-<div id="login">
+<!-- 登录区 -->
+<div id="loginBox">
   <h3>销售登录</h3>
-  <input id="email" placeholder="邮箱" />
-  <input id="password" type="password" placeholder="密码" />
-  <button onclick="login()">登录</button>
-  <p id="loginMsg"></p>
+  <input id="loginEmail" placeholder="邮箱" />
+  <input id="loginPassword" type="password" placeholder="密码" />
+  <button id="loginBtn">登录</button>
+  <p id="loginMsg" style="color:red;"></p>
 </div>
 
-<div id="app" class="hidden">
+<!-- 主应用区 -->
+<div id="appBox" class="hidden">
   <h3>新建订单</h3>
   <input id="product" placeholder="产品名称" />
   <input id="qty" type="number" placeholder="数量" />
-  <button onclick="submitOrder()">提交订单</button>
+  <button id="submitBtn">提交订单</button>
 
   <h3>我的订单</h3>
-  <ul id="orders"></ul>
+  <ul id="orderList"></ul>
 
-  <button onclick="logout()">退出登录</button>
+  <button id="logoutBtn">退出登录</button>
 </div>
 
 <script>
-let currentUser = null;
+  let currentUser = null;
 
-async function login() {
-  const email = email.value;
-  const password = password.value;
+  const loginBox = document.getElementById("loginBox");
+  const appBox = document.getElementById("appBox");
+  const loginMsg = document.getElementById("loginMsg");
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email, password
-  });
+  document.getElementById("loginBtn").onclick = login;
+  document.getElementById("submitBtn").onclick = submitOrder;
+  document.getElementById("logoutBtn").onclick = logout;
 
-  if (error) {
-    loginMsg.innerText = error.message;
-    return;
+  async function login() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+
+    if (!email || !password) {
+      loginMsg.innerText = "请输入邮箱和密码";
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      loginMsg.innerText = error.message;
+      return;
+    }
+
+    currentUser = data.user;
+    loginBox.classList.add("hidden");
+    appBox.classList.remove("hidden");
+    loadOrders();
   }
 
-  currentUser = data.user;
-  login.classList.add("hidden");
-  app.classList.remove("hidden");
-  loadOrders();
-}
+  async function loadOrders() {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-async function loadOrders() {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*")
-    .order("created_at", { ascending: false });
+    const list = document.getElementById("orderList");
+    list.innerHTML = "";
 
-  orders.innerHTML = "";
-  data?.forEach(o => {
-    const li = document.createElement("li");
-    li.innerText = `${o.product} × ${o.qty}`;
-    orders.appendChild(li);
-  });
-}
+    if (data) {
+      data.forEach(o => {
+        const li = document.createElement("li");
+        li.innerText = `${o.product} × ${o.qty}`;
+        list.appendChild(li);
+      });
+    }
+  }
 
-async function submitOrder() {
-  await supabase.from("orders").insert({
-    product: product.value,
-    qty: qty.value,
-    account: currentUser.email
-  });
-  loadOrders();
-}
+  async function submitOrder() {
+    const product = document.getElementById("product").value.trim();
+    const qty = document.getElementById("qty").value;
 
-async function logout() {
-  await supabase.auth.signOut();
-  location.reload();
-}
+    if (!product || !qty) {
+      alert("请填写完整信息");
+      return;
+    }
+
+    await supabase.from("orders").insert({
+      product,
+      qty,
+      account: currentUser.email
+    });
+
+    document.getElementById("product").value = "";
+    document.getElementById("qty").value = "";
+    loadOrders();
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+    location.reload();
+  }
 </script>
 
-<footer style="margin-top:40px;font-size:12px;">
-© Pro Player · 销售系统 v4.0  
-<br>Developed by Mars-老刘 & ChatGPT  
-<br>Version build: 2026-01-16  {{精确时间以你提交为准}}
+<footer style="margin-top:40px;font-size:12px;color:#666;">
+  © Pro Player · 销售系统 v4.0<br>
+  Developed by Mars-老刘 & ChatGPT<br>
+  Version build: 2026-01-16
 </footer>
 
 </body>
