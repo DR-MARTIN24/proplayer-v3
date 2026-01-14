@@ -1,67 +1,67 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro Player｜管理员后台</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./config.js"></script>
-
-<style>
-body { font-family:sans-serif; padding:16px; }
-table { width:100%; border-collapse: collapse; }
-td, th { border:1px solid #ddd; padding:6px; font-size:13px; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Pro Player · 管理后台 v4.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
 </head>
-
 <body>
 
-<h2>Pro Player · 管理员后台</h2>
+<h2>Pro Player 管理后台</h2>
+<p id="msg"></p>
 
-<table>
-<thead>
-<tr>
-<th>账号</th>
-<th>款式</th>
-<th>数量</th>
-<th>销售价</th>
-<th>时间</th>
-</tr>
-</thead>
-<tbody id="list"></tbody>
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>销售账号</th>
+      <th>产品</th>
+      <th>数量</th>
+      <th>时间</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
 </table>
 
-<script>
-const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<button onclick="logout()">退出登录</button>
 
-async function loadAll() {
-  const { data } = await supabase
+<script>
+(async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    msg.innerText = "请先登录管理员账号";
+    location.href = "sales.html";
+    return;
+  }
+
+  const { data, error } = await supabase
     .from("orders")
     .select("*")
-    .order("created_at", { ascending:false });
+    .order("created_at", { ascending: false });
 
-  list.innerHTML = "";
-  data.forEach(o=>{
-    list.innerHTML += `
-    <tr>
+  data?.forEach(o => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
       <td>${o.account}</td>
-      <td>${o.items[0].name}</td>
+      <td>${o.product}</td>
       <td>${o.qty}</td>
-      <td>¥${o.sale_price}</td>
       <td>${o.created_at}</td>
-    </tr>`;
+    `;
+    list.appendChild(tr);
   });
+})();
+
+async function logout() {
+  await supabase.auth.signOut();
+  location.href = "sales.html";
 }
-loadAll();
 </script>
 
-<footer>
-<hr>
-<small>
-© Pro Player ｜ Mars-老刘 & ChatGPT<br>
-版本 v3.0 ｜ 更新时间：2026-01-14 23:18:00
-</small>
+<footer style="margin-top:40px;font-size:12px;">
+© Pro Player · Admin System v4.0  
+<br>Developed by Mars-老刘 & ChatGPT  
+<br>Version build: 2026-01-16
 </footer>
 
 </body>
