@@ -2,30 +2,36 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V8.0</title>
+  <title>Pro Player · 总控台 V8.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
-    // ✅ Key 绝对正确
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 
   <style>
-    body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
-    h2 { border-bottom: 2px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
     
+    /* 顶部导航栏 */
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+    .title-area { display: flex; flex-direction: column; }
+    .clock { font-size: 14px; color: #007aff; font-weight: bold; margin-top: 5px; font-family: monospace; }
+    
+    /* 统计卡 */
     .stats-box { display: flex; gap: 15px; margin-bottom: 20px; }
     .card { background: #fff; padding: 15px; border-radius: 8px; flex: 1; border-left: 4px solid #007aff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .num { font-size: 24px; font-weight: bold; margin-top: 5px; }
 
+    /* 占比条 */
     .bar-box { background: #fff; padding: 10px; margin-bottom: 20px; border-radius: 8px; }
     .bar-track { display: flex; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; margin-top: 5px; }
     .bar-part { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; transition: width 0.3s; }
 
+    /* 按钮组 */
     .btn-group { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
     button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; }
     .btn-blue { background: #007aff; }
@@ -34,27 +40,34 @@
     .btn-red { background: #ff3b30; }
     .btn-gray { background: #eee; color: #333; }
 
+    /* 表格 - 强制显示，去除隐藏属性 */
     .table-container { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 200px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-    th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
-    th { background: #fafafa; white-space: nowrap; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
+    th { background: #fafafa; white-space: nowrap; font-weight: 600; color: #555; }
+    tr:hover { background: #f9f9f9; }
     
-    /* 弹窗样式 */
+    .remark-cell { font-size: 12px; color: #666; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    /* 弹窗 */
     .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 1000; }
     .modal.show { display: flex; }
     .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
     
-    #loader { text-align: center; padding: 40px; color: #888; }
+    #loader { text-align: center; padding: 40px; color: #888; font-size: 16px; }
   </style>
 </head>
 
 <body>
 
-<h2>
-  <span>Pro Player 总控台 V8.0</span>
+<div class="header">
+  <div class="title-area">
+    <span style="font-size: 20px; font-weight: bold;">Pro Player 总控台 V8.1</span>
+    <span id="clock" class="clock">🕒 正在同步时间...</span>
+  </div>
   <button class="btn-gray" onclick="location.href='sales.html'">返回销售端</button>
-</h2>
+</div>
 
 <div class="stats-box">
   <div class="card"><div>今日订单</div><div class="num" id="vOrder">0</div></div>
@@ -73,27 +86,27 @@
 </div>
 
 <div class="btn-group">
-  <button class="btn-blue" onclick="exportCainiao()">📤 导出菜鸟 (高级版)</button>
-  <button class="btn-green" onclick="exportFinance()">💰 导出财务 (中文)</button>
-  <button class="btn-orange" onclick="document.getElementById('giftModal').classList.add('show')">🎁 录入赠送</button>
+  <button class="btn-blue" onclick="exportCainiao()">📤 导出菜鸟</button>
+  <button class="btn-green" onclick="exportFinance()">💰 导出财务</button>
+  <button class="btn-orange" onclick="openGift()">🎁 录入赠送</button>
   <button class="btn-red" onclick="delSel()">🗑 删除选中</button>
-  <button class="btn-gray" onclick="loadData()">🔄 刷新</button>
+  <button class="btn-gray" onclick="loadData()">🔄 刷新数据</button>
   
   <input type="file" id="fileIn" accept=".xlsx" style="display:none" onchange="doImport(this)">
   <button class="btn-gray" style="margin-left:auto" onclick="document.getElementById('fileIn').click()">📥 导入回执</button>
 </div>
 
-<div id="loader">正在连接数据库...</div>
-
 <div class="table-container">
-  <table id="mainTable" style="display:none">
+  <table id="mainTable">
     <thead>
       <tr>
         <th width="30"><input type="checkbox" onchange="checkAll(this)"></th>
-        <th>编号</th><th>时间</th><th>销售</th><th>收件人</th><th>产品</th><th>A/B</th><th>数</th><th>价</th><th>状态</th><th>备注</th>
+        <th>编号</th><th>下单时间</th><th>销售员</th><th>收件信息</th><th>产品</th><th>A/B明细</th><th>数量</th><th>总价</th><th>状态</th><th>备注</th>
       </tr>
     </thead>
-    <tbody id="tbody"></tbody>
+    <tbody id="tbody">
+      <tr><td colspan="11" style="text-align:center; padding:20px;">数据加载中...</td></tr>
+    </tbody>
   </table>
 </div>
 
@@ -119,159 +132,212 @@
 <script>
   let allData = [];
 
-  // 1. 无门槛启动
-  window.onload = () => { loadData(); };
+  // 1. 启动时钟 & 加载数据
+  window.onload = () => {
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('clock').innerText = "🕒 " + now.toLocaleString();
+    }, 1000);
+    loadData();
+  };
 
+  // 2. 数据读取 (不设门槛)
   async function loadData() {
-    document.getElementById("loader").innerText = "正在读取...";
-    document.getElementById("loader").style.display = "block";
-    
-    // 简单粗暴读取，不带 filter
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">正在从数据库拉取数据...</td></tr>`;
+
+    // 简单粗暴，读取所有
     const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
 
     if (error) {
-      document.getElementById("loader").innerHTML = `<span style="color:red">读取失败: ${error.message}</span><br>请检查 RLS 或网络`;
+      alert("读取失败: " + error.message);
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:red;">读取失败: ${error.message}</td></tr>`;
       return;
     }
 
     if (!data || data.length === 0) {
-      document.getElementById("loader").innerText = "✅ 连接成功，但没有订单数据 (0条)";
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">数据库里没有订单 (0条)</td></tr>`;
       return;
     }
 
     allData = data;
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("mainTable").style.display = "table";
-    renderTable();
-    calcStats();
+    renderTable(); // 渲染
+    calcStats();   // 统计
   }
 
+  // 3. 强力渲染 (防止一行报错导致全表不显示)
   function renderTable() {
-    const box = document.getElementById("tbody");
-    box.innerHTML = "";
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = ""; // 清空
+
     allData.forEach(r => {
       try {
         const tr = document.createElement("tr");
         
-        const id = (r.id || "").substr(0,8);
+        // 安全获取字段 (防止 null 报错)
+        const id = (r.id || "").toString().substring(0, 8);
         const time = r.created_at ? new Date(r.created_at).toLocaleString() : "-";
-        const acc = (r.account || "").split("@")[0];
-        const name = r.customer_name || "未知";
+        const account = (r.account || "未知").split("@")[0];
+        const name = r.customer_name || "无名";
         const phone = r.phone || "";
-        const qa = r.qty_a || 0;
-        const qb = r.qty_b || 0;
-        const total = (r.total_qty !== undefined && r.total_qty !== null) ? r.total_qty : (qa+qb);
-        const price = r.total_price || 0;
-        
-        let rem = r.remarks || "";
-        if(rem.includes("内购") || rem.includes("赠送")) rem = `<span style="color:green;font-weight:bold">${rem}</span>`;
+        const qa = Number(r.qty_a) || 0;
+        const qb = Number(r.qty_b) || 0;
+        const total = Number(r.total_qty) || (qa + qb);
+        const price = Number(r.total_price) || 0;
+        let remarks = r.remarks || "";
 
-        const isShip = !!r.tracking_number;
-        const statusHtml = isShip 
-          ? `<span style="color:green;font-weight:bold">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank" style="color:green">${r.tracking_number}</a></span>` 
-          : `<span style="color:orange">待发货</span>`;
+        // 状态处理
+        const isShipped = !!r.tracking_number;
+        const statusHtml = isShipped 
+          ? `<span style="color:green; font-weight:bold;">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank" style="color:green; font-size:12px;">${r.tracking_number}</a></span>`
+          : `<span style="color:#ff9500;">待发货</span>`;
+
+        // 备注高亮
+        if (remarks.includes("内购") || remarks.includes("赠送")) {
+          remarks = `<span style="color:green; font-weight:bold;">${remarks}</span>`;
+        }
+
+        // 价格样式
+        const priceHtml = (price === 0) 
+          ? `<span style="color:#ff9500; font-weight:bold;">赠送</span>` 
+          : `¥${price}`;
 
         tr.innerHTML = `
           <td><input type="checkbox" class="chk" value="${r.id}"></td>
-          <td>${id}</td>
-          <td>${time}</td>
-          <td>${acc}</td>
-          <td><b>${name}</b><br>${phone}</td>
+          <td style="font-family:monospace; color:#666;">${id}</td>
+          <td style="font-size:12px;">${time}</td>
+          <td>${account}</td>
+          <td>
+            <div style="font-weight:bold;">${name}</div>
+            <div style="font-size:12px; color:#666;">${phone}</div>
+          </td>
           <td>ProPlayer鼠标垫</td>
-          <td>A:${qa} / B:${qb}</td>
-          <td><b>${total}</b></td>
-          <td>${price}</td>
+          <td style="font-size:12px; color:#666;">A:${qa} / B:${qb}</td>
+          <td style="font-weight:bold; text-align:center;">${total}</td>
+          <td style="color:#007aff;">${priceHtml}</td>
           <td>${statusHtml}</td>
-          <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${rem}">${rem}</td>
+          <td class="remark-cell" title="${r.remarks}">${remarks}</td>
         `;
-        box.appendChild(tr);
-      } catch (err) { console.error(err); }
+        tbody.appendChild(tr);
+      } catch (err) {
+        console.error("某一行渲染出错，已跳过:", err);
+      }
     });
   }
 
+  // 4. 统计逻辑
   function calcStats() {
-    const today = new Date().toISOString().split("T")[0];
+    const todayStr = new Date().toISOString().split("T")[0];
     let n=0, m=0, p=0, sa=0, sb=0;
-    allData.forEach(r => {
-      if(r.created_at && r.created_at.includes(today)) { n++; m+=(r.total_price||0); }
-      if(!r.tracking_number) p++;
-      sa += (r.qty_a||0); sb += (r.qty_b||0);
-    });
-    document.getElementById("vOrder").innerText = n;
-    document.getElementById("vMoney").innerText = "¥"+m;
-    document.getElementById("vPending").innerText = p;
     
-    const t = sa+sb;
-    if(t>0) {
-      const pa = Math.round(sa/t*100);
-      document.getElementById("barA").style.width = pa+"%"; document.getElementById("barA").innerText = `A:${pa}% (${sa})`;
-      document.getElementById("barB").style.width = (100-pa)+"%"; document.getElementById("barB").innerText = `B:${100-pa}% (${sb})`;
+    allData.forEach(r => {
+      // 容错统计
+      if (r.created_at && r.created_at.includes(todayStr)) {
+        n++;
+        m += (Number(r.total_price) || 0);
+      }
+      if (!r.tracking_number) p++;
+      sa += (Number(r.qty_a) || 0);
+      sb += (Number(r.qty_b) || 0);
+    });
+
+    document.getElementById("vOrder").innerText = n;
+    document.getElementById("vMoney").innerText = "¥" + m;
+    document.getElementById("vPending").innerText = p;
+
+    // 占比条
+    const t = sa + sb;
+    if (t > 0) {
+      const pa = Math.round((sa / t) * 100);
+      document.getElementById("barA").style.width = pa + "%";
+      document.getElementById("barA").innerText = `A: ${pa}% (${sa})`;
+      document.getElementById("barB").style.width = (100 - pa) + "%";
+      document.getElementById("barB").innerText = `B: ${100 - pa}% (${sb})`;
+    } else {
+      document.getElementById("barA").innerText = "A: 0";
+      document.getElementById("barB").innerText = "B: 0";
     }
   }
 
-  // === 恢复 V7.4 完美 Excel 导出 ===
+  // === 功能区 ===
+  function openGift() { document.getElementById('giftModal').classList.add('show'); }
+  
+  async function submitGift() {
+    const n = document.getElementById('gn').value;
+    const qa = Number(document.getElementById('gqa').value);
+    const qb = Number(document.getElementById('gqb').value);
+    
+    if(!n || (qa+qb)<=0) return alert("请填写姓名和数量");
+    
+    const { error } = await window.sb.from("orders").insert({
+      account: "admin_gift",
+      customer_name: n,
+      phone: document.getElementById('gp').value,
+      address: document.getElementById('ga').value,
+      qty_a: qa, qty_b: qb, total_qty: qa+qb,
+      product: `A款:${qa}, B款:${qb}`,
+      total_price: 0, shipping: 0,
+      status: "pending",
+      remarks: `[${document.getElementById('gt').value}] ${document.getElementById('gr').value}`,
+      item_category: "日用品"
+    });
+    
+    if(error) alert(error.message);
+    else { alert("✅ 录入成功"); document.getElementById('giftModal').classList.remove('show'); loadData(); }
+  }
+
+  function checkAll(el) { document.querySelectorAll(".chk").forEach(c => c.checked = el.checked); }
+  
+  async function delSel() {
+    const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
+    if(!ids.length) return alert("没选怎么删？");
+    if(confirm(`⚠️ 确定删除这 ${ids.length} 条数据吗？`)) {
+      await window.sb.from("orders").delete().in("id", ids);
+      loadData();
+    }
+  }
+
+  // === Excel 导出 (保留完美版) ===
   function exportCainiao() {
     if(!allData.length) return alert("无数据");
-    const headers = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
-    const data = [["","收件信息","","","物品信息","","","备注","","回填区"], headers];
+    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
+    const d = [["","收件信息","","","物品信息","","","备注","","回填区"], h];
     
     allData.forEach(r => {
       let desc = "ProPlayer鼠标垫";
       if(r.qty_a) desc += ` (A款粗*${r.qty_a})`;
       if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
-      data.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
+      d.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
     });
 
-    if(typeof XLSX === 'undefined') return alert("Excel 库加载失败(网络原因)，请刷新重试");
-
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
+    if(typeof XLSX === 'undefined') return alert("Excel 库加载慢，请稍后再试");
+    const ws = XLSX.utils.aoa_to_sheet(d);
     
-    // 样式加回
+    // 样式
+    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
     const range = XLSX.utils.decode_range(ws['!ref']);
     for(let R=0; R<=range.e.r; ++R) {
       for(let C=0; C<=range.e.c; ++C) {
-        const addr = XLSX.utils.encode_cell({r:R, c:C});
-        if(!ws[addr]) continue;
-        ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
-        if(R < 2) { ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; ws[addr].s.font = { bold: true }; }
-        if(R >= 2 && C === 7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
-        if(R >= 2 && C === 9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
+        const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
+        if(!cell) continue;
+        cell.s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
+        if(R<2) { cell.s.fill={fgColor:{rgb:"CCFFCC"}}; cell.s.font={bold:true}; }
+        if(R>=2 && C===7) cell.s.font={color:{rgb:"FF0000"},bold:true};
+        if(R>=2 && C===9) cell.s.fill={fgColor:{rgb:"FFFFCC"}};
       }
     }
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, "菜鸟发货单.xlsx");
   }
 
   function exportFinance() {
     const body = [["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
-    allData.forEach(r => body.push([r.created_at, r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number||"未发货", r.remarks, r.tracking_number]));
+    allData.forEach(r => body.push([new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发货":"未发货", r.remarks, r.tracking_number]));
     const ws = XLSX.utils.aoa_to_sheet(body);
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务");
-    XLSX.writeFile(wb, `财务_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, "财务单.xlsx");
   }
 
-  async function submitGift() {
-    const type = document.getElementById("gt").value;
-    const name = document.getElementById("gn").value;
-    const qa = Number(document.getElementById("gqa").value);
-    const qb = Number(document.getElementById("gqb").value);
-    if(!name || (qa+qb)<=0) return alert("写名字，填数量！");
-    const { error } = await window.sb.from("orders").insert({
-      account: "admin_gift", customer_name: name, phone: document.getElementById("gp").value, address: document.getElementById("ga").value,
-      qty_a: qa, qty_b: qb, total_qty: qa+qb, product: `A款:${qa}, B款:${qb}`, total_price: 0, shipping: 0,
-      status: "pending", remarks: `[${type}] ${document.getElementById("gr").value}`, item_category: "日用品"
-    });
-    if(error) alert(error.message);
-    else { alert("✅ 录入成功"); document.getElementById("giftModal").classList.remove("show"); loadData(); }
-  }
-
-  function checkAll(el) { document.querySelectorAll(".chk").forEach(c => c.checked = el.checked); }
-  async function delSel() {
-    const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
-    if(!ids.length) return alert("没选怎么删？");
-    if(confirm(`确定删除这 ${ids.length} 条？`)) { await window.sb.from("orders").delete().in("id", ids); loadData(); }
-  }
   async function doImport(el) {
     const f = el.files[0]; if(!f) return;
     const r = new FileReader();
@@ -281,8 +347,14 @@
       let n = 0;
       for(let row of rows) {
         let oid, track;
-        for(let k in row) { if(k.includes("编号")) oid = row[k]; if(k.includes("回填") || k.includes("运单")) track = row[k]; }
-        if(oid && track) { const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid); if(!error) n++; }
+        for(let k in row) {
+          if(k.includes("编号")) oid = row[k];
+          if(k.includes("回填") || k.includes("运单")) track = row[k];
+        }
+        if(oid && track) {
+          const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid);
+          if(!error) n++;
+        }
       }
       alert(`✅ 更新 ${n} 条`); el.value=""; loadData();
     };
