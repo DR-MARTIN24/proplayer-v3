@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售 V8.3 (颜值修复版)</title>
+  <title>Pro Player · 销售 V8.4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
@@ -14,14 +14,21 @@
   </script>
 
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 500px; margin: auto; background: #f2f2f7; color: #1c1c1e; }
+    /* 全局字体强制统一，杜绝宋体 */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; padding: 15px; max-width: 500px; margin: auto; background: #f2f2f7; color: #1c1c1e; }
+    
     h2 { margin: 0 0 15px 0; font-weight: 800; text-align: center; color: #333; }
     
     .card { background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; transition: transform 0.2s; }
     
     .input-group { margin-bottom: 15px; }
     label { display: block; font-size: 13px; color: #8e8e93; margin-bottom: 6px; font-weight: 600; }
-    input, textarea, select { width: 100%; padding: 14px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; -webkit-appearance: none; background: #fff; transition: border 0.2s; }
+    
+    /* 关键修复：强制 textarea 继承字体 */
+    input, textarea, select { 
+      font-family: inherit; /* ✅ 完美解决宋体问题 */
+      width: 100%; padding: 14px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; -webkit-appearance: none; background: #fff; transition: border 0.2s; 
+    }
     input:focus, textarea:focus { border-color: #007aff; outline: none; }
     
     .qty-control { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 10px 15px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #eee; }
@@ -37,13 +44,13 @@
     .total-price { font-size: 32px; font-weight: 800; display: block; }
     .price-note { font-size: 13px; opacity: 0.9; margin-top: 5px; }
     
-    .btn-main { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+    .btn-main { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); font-family: inherit; }
     .btn-main:active { opacity: 0.8; transform: scale(0.98); }
     .btn-main:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
     
-    .btn-ocr { width: 100%; background: #e5e5ea; color: #333; padding: 12px; border-radius: 10px; border: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 20px; cursor: pointer; }
+    .btn-ocr { width: 100%; background: #e5e5ea; color: #333; padding: 12px; border-radius: 10px; border: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 20px; cursor: pointer; font-family: inherit; }
     
-    .btn-logout { background: transparent; color: #ff3b30; border: 1px solid #ff3b30; width: 100%; padding: 12px; border-radius: 10px; font-weight: 600; margin-top: 20px; }
+    .btn-logout { background: transparent; color: #ff3b30; border: 1px solid #ff3b30; width: 100%; padding: 12px; border-radius: 10px; font-weight: 600; margin-top: 20px; font-family: inherit; }
 
     .hidden { display: none !important; }
     
@@ -59,7 +66,7 @@
 
 <body>
 
-<h2>🚀 Pro Player 销售 V8.3</h2>
+<h2>🚀 Pro Player 销售 V8.4</h2>
 
 <div id="loginBox" class="card">
   <h3 style="margin-top:0">员工登录</h3>
@@ -152,8 +159,8 @@
     <div id="ocrStatus" style="color:#ff9500; font-size:12px; margin-bottom:10px; font-weight:bold;"></div>
     
     <div style="display:flex; gap:10px;">
-      <button onclick="document.getElementById('ocrModal').classList.add('hidden')" style="flex:1; padding:12px; border:none; background:#eee; border-radius:8px; font-weight:600;">取消</button>
-      <button onclick="processSmartInput()" style="flex:1; padding:12px; border:none; background:#007aff; color:#fff; border-radius:8px; font-weight:600;">一键填充</button>
+      <button onclick="document.getElementById('ocrModal').classList.add('hidden')" style="flex:1; padding:12px; border:none; background:#eee; border-radius:8px; font-weight:600; font-family:inherit;">取消</button>
+      <button onclick="processSmartInput()" style="flex:1; padding:12px; border:none; background:#007aff; color:#fff; border-radius:8px; font-weight:600; font-family:inherit;">一键填充</button>
     </div>
   </div>
 </div>
@@ -186,7 +193,7 @@
     if(currentUser.email.trim().toLowerCase()===MY_ADMIN_EMAIL){
       const b=document.createElement("button"); 
       b.innerText="🔧 进入总控后台"; 
-      b.style.cssText="position:fixed; bottom:20px; right:20px; background:#000; color:#fff; padding:12px 24px; border-radius:30px; border:2px solid #fff; box-shadow:0 4px 15px rgba(0,0,0,0.4); z-index:9999; cursor:pointer; font-weight:bold;";
+      b.style.cssText="position:fixed; bottom:20px; right:20px; background:#000; color:#fff; padding:12px 24px; border-radius:30px; border:2px solid #fff; box-shadow:0 4px 15px rgba(0,0,0,0.4); z-index:9999; cursor:pointer; font-weight:bold; font-family:inherit;";
       b.onclick=()=>location.href="admin.html"; 
       document.body.appendChild(b);
     }
@@ -209,7 +216,7 @@
     document.getElementById("priceDetail").innerText=r.n;
   }
 
-  // ✅ 核心修复：防连点逻辑
+  // ✅ 防连点逻辑
   document.getElementById("submitBtn").onclick = async () => {
     const btn = document.getElementById("submitBtn");
     
@@ -223,7 +230,7 @@
     if(!n || !p) return alert("❌ 姓名和电话是必填项！");
     if((qa+qb)<=0) return alert("❌ 请至少选择一件商品");
     
-    // 2. 上锁 (防止手抖连点)
+    // 2. 上锁
     btn.disabled = true;
     btn.innerText = "⏳ 正在提交...";
     
@@ -247,11 +254,11 @@
       btn.innerText = "提交订单";
     } else {
       alert("✅ 订单提交成功！");
-      location.reload(); // 刷新页面重置所有状态
+      location.reload(); 
     }
   };
 
-  // OCR 逻辑 (带错误处理)
+  // OCR 逻辑
   function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
   async function processSmartInput() {
     const btn = document.querySelector("#ocrModal button:last-child");
@@ -290,7 +297,7 @@
     alert("✅ 填充完毕，请核对！");
   }
 
-  // 辅助加载函数
+  // 辅助加载
   async function loadRankings(){
     const{data}=await window.sb.from("sales_leaderboard").select("*").limit(10);
     if(data) document.getElementById("rankList").innerHTML=data.map(i=>`<div style="background:#f0f0f5;padding:6px 12px;border-radius:8px;flex-shrink:0;text-align:center;border:${i.account===currentUser.email?'1px solid #007aff':'none'}"><div>${i.account.split('@')[0]}</div><b>¥${i.total_revenue}</b></div>`).join("");
