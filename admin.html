@@ -2,149 +2,123 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 管理后台 V4.1</title>
+  <title>Pro Player · 管理后台 V5.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
-    // === Pro Player 系统配置 ===
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T";
-
     if (typeof supabase !== 'undefined') {
       window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
   </script>
 
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background: #f0f2f5; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 1100px; margin: auto; background: #f5f7fa; }
+    h2 { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
     
-    /* 顶部统计卡片 */
-    .dashboard { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-    .stat-card { flex: 1; min-width: 150px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .stat-title { font-size: 12px; color: #888; text-transform: uppercase; }
-    .stat-value { font-size: 24px; font-weight: 700; color: #333; margin-top: 5px; }
+    .dashboard { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-card { flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .stat-val { font-size: 28px; font-weight: bold; margin-top: 5px; }
 
-    /* 表格样式 */
-    .table-container { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 800px; }
-    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-    th { background: #f8f9fa; font-weight: 600; color: #555; }
+    .toolbar { background: #fff; padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     
-    /* 红色备注 */
+    button { padding: 10px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; color:#fff; }
+    button:active { transform: scale(0.98); }
+    .btn-export { background: #007aff; }
+    .btn-finance { background: #34c759; }
+    .btn-import { background: #5856d6; }
+    .btn-logout { background: #ff3b30; }
+
+    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+    th { background: #f4f4f4; color: #555; }
     .remark-cell { color: #d70015; font-weight: 500; }
-    
-    .btn-group { margin-bottom: 15px; display: flex; gap: 10px; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
-    .btn-primary { background: #007aff; color: white; }
-    .btn-success { background: #34c759; color: white; }
-    .btn-danger { background: #ff3b30; color: white; }
-    button:hover { opacity: 0.9; }
+    .status-shipped { color: green; font-weight: bold; }
+    .status-pending { color: orange; }
 
-    .loader { text-align: center; padding: 20px; color: #999; }
+    #fileInput { display: none; }
   </style>
 </head>
 
 <body>
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-  <h2 style="margin:0;">Pro Player 管理控制台 V4.1</h2>
-  <button class="btn-danger" onclick="logout()">退出系统</button>
+<div style="display:flex; justify-content:space-between; align-items:center;">
+  <h2>Pro Player 总控台 V5.0</h2>
+  <button class="btn-logout" onclick="logout()">安全退出</button>
 </div>
 
 <div class="dashboard">
   <div class="stat-card">
-    <div class="stat-title">今日订单数</div>
-    <div class="stat-value" id="statOrders">0</div>
+    <div style="color:#888; font-size:12px;">今日订单</div>
+    <div class="stat-val" id="sOrders">0</div>
   </div>
   <div class="stat-card">
-    <div class="stat-title">今日销售额 (元)</div>
-    <div class="stat-value" id="statMoney">0.00</div>
+    <div style="color:#888; font-size:12px;">今日营收</div>
+    <div class="stat-val" id="sMoney">¥0.00</div>
   </div>
   <div class="stat-card">
-    <div class="stat-title">今日垫子总数 (张)</div>
-    <div class="stat-value" id="statQty">0</div>
+    <div style="color:#888; font-size:12px;">待发货</div>
+    <div class="stat-val" id="sPending" style="color:orange">0</div>
   </div>
 </div>
 
-<div class="table-container">
-  <div class="btn-group">
-    <button class="btn-primary" onclick="exportExcel('supply')">📤 导出供应链发货单 (V2)</button>
-    <button class="btn-success" onclick="exportExcel('finance')">💰 导出内部对账单 (含金额)</button>
-    <button style="background:#eee; color:#333;" onclick="loadData()">🔄 刷新列表</button>
-  </div>
-
-  <div id="loader" class="loader">数据加载中...</div>
-
-  <table id="dataTable" style="display:none;">
-    <thead>
-      <tr>
-        <th width="15%">时间</th>
-        <th width="10%">销售员</th>
-        <th width="10%">收件人</th>
-        <th width="20%">产品详情</th>
-        <th width="5%">总数</th>
-        <th width="10%">类型</th>
-        <th width="10%">总价</th>
-        <th width="20%">备注 (红字)</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+<div class="toolbar">
+  <button class="btn-export" onclick="exportCainiao()">📤 导出菜鸟发货单 (V2)</button>
+  <button class="btn-finance" onclick="exportFinance()">💰 导出内部财务单</button>
+  <div style="width:1px; height:30px; background:#ddd; margin:0 10px;"></div>
+  <button class="btn-import" onclick="document.getElementById('fileInput').click()">📥 导入发货回执 (回填单号)</button>
+  <input type="file" id="fileInput" accept=".xlsx" onchange="handleImport(this)">
+  <span id="importStatus" style="font-size:13px; color:#666;"></span>
+  <button style="background:#eee; color:#333; margin-left:auto;" onclick="loadData()">🔄 刷新数据</button>
 </div>
+
+<div id="loader" style="text-align:center; padding:20px;">数据加载中...</div>
+
+<table id="dataTable" style="display:none;">
+  <thead>
+    <tr>
+      <th>订单号 (系统ID)</th>
+      <th>时间</th>
+      <th>销售</th>
+      <th>收件人</th>
+      <th>产品</th>
+      <th>总数</th>
+      <th>状态</th>
+      <th>备注</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
 
 <script>
   let allOrders = [];
-
+  
   // ==========================================
-  // ⚠️⚠️⚠️ 请在这里修改你的管理员邮箱 ⚠️⚠️⚠️
-  // 把下面的 '你的邮箱@example.com' 换成你真实的邮箱
+  // ✅ 你的邮箱已自动填好，无需修改
   const MY_ADMIN_EMAIL = "169351@qq.com"; 
   // ==========================================
 
-  // 初始化检查
   (async () => {
-    // 1. 检查是否登录
     const { data: { user } } = await window.sb.auth.getUser();
-    
-    if (!user) {
-      alert("请先在销售页面 (sales.html) 登录账号");
-      location.href = "sales.html"; // 跳回登录页
+    if (!user || user.email.toLowerCase() !== MY_ADMIN_EMAIL.toLowerCase()) {
+      alert("权限验证失败：非管理员禁止访问");
+      location.href = "sales.html";
       return;
     }
-
-    // 2. 检查是不是管理员
-    // 注意：这里用到了 toLowerCase() 是防止大小写不一样导致判断错误
-    if (user.email.toLowerCase() !== MY_ADMIN_EMAIL.toLowerCase()) {
-      alert("⚠️ 权限不足！\n\n该账号仅限销售使用，无权访问管理后台。");
-      location.href = "sales.html"; // 踢回销售页
-      return;
-    }
-
-    // 3. 身份验证通过，加载数据
     loadData();
   })();
 
   async function loadData() {
     document.getElementById("loader").style.display = "block";
-    document.getElementById("dataTable").style.display = "none";
-
-    const { data, error } = await window.sb
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      alert("加载失败: " + error.message);
-      return;
-    }
+    const { data, error } = await window.sb.from("orders").select("*").order("created_at", { ascending: false });
+    if(error) return alert(error.message);
     
     allOrders = data;
     renderTable(data);
     calcStats(data);
-    
     document.getElementById("loader").style.display = "none";
     document.getElementById("dataTable").style.display = "table";
   }
@@ -152,123 +126,123 @@
   function renderTable(data) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
-    
     data.forEach(row => {
-      const date = new Date(row.created_at).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
       const tr = document.createElement("tr");
+      const shortId = row.id.split('-')[0];
+      const statusHtml = row.tracking_number 
+        ? `<span class="status-shipped">已发货<br><small>${row.tracking_number}</small></span>` 
+        : `<span class="status-pending">待发货</span>`;
+
       tr.innerHTML = `
-        <td>${date}</td>
+        <td style="font-family:monospace; color:#666;">...${shortId}</td>
+        <td>${new Date(row.created_at).toLocaleString()}</td>
         <td>${row.account}</td>
-        <td>${row.customer_name}<br><span style="font-size:12px;color:#999">${row.phone}</span></td>
+        <td>${row.customer_name}<br><small>${row.phone}</small></td>
         <td>${row.product}</td>
         <td style="font-weight:bold">${row.total_qty}</td>
-        <td>${row.order_type === 'internal' ? '<span style="color:orange">内购</span>' : '零售'}</td>
-        <td>¥${row.total_price}</td>
-        <td class="remark-cell">${row.remarks || '-'}</td>
+        <td>${statusHtml}</td>
+        <td class="remark-cell">${row.remarks || ''}</td>
       `;
       tbody.appendChild(tr);
     });
   }
 
   function calcStats(data) {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayOrders = data.filter(o => o.created_at.startsWith(todayStr));
-
-    document.getElementById("statOrders").innerText = todayOrders.length;
-    
-    const totalMoney = todayOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
-    document.getElementById("statMoney").innerText = totalMoney.toFixed(2);
-
-    const totalQty = todayOrders.reduce((sum, o) => sum + (o.total_qty || 0), 0);
-    document.getElementById("statQty").innerText = totalQty;
+    const today = new Date().toISOString().split('T')[0];
+    const todays = data.filter(o => o.created_at.startsWith(today));
+    document.getElementById("sOrders").innerText = todays.length;
+    document.getElementById("sMoney").innerText = "¥" + todays.reduce((a,b)=>a+(b.total_price||0),0).toFixed(2);
+    document.getElementById("sPending").innerText = data.filter(o => !o.tracking_number).length;
   }
 
-  // 导出功能
-  function exportExcel(version) {
-    if (allOrders.length === 0) return alert("没有数据可导出");
+  // === V5.0 核心导出 (菜鸟模板) ===
+  function exportCainiao() {
+    if(!allOrders.length) return;
+    
+    // 菜鸟模板表头 V2
+    const wsData = [[
+      "订单号", "买家会员名", "收件人姓名", "收件人手机", "收件人电话", 
+      "收件人省", "收件人市", "收件人区", "收件人详细地址", 
+      "物品分类", "物品名称", "物品数量", "买家备注"
+    ]];
 
-    const isSupply = (version === 'supply');
-    const wsData = [];
-
-    // 表头
-    if (isSupply) {
-      wsData.push(["订单号(自动)", "收件人姓名", "手机", "详细地址", "物品名称", "数量", "备注"]);
-    } else {
-      wsData.push(["下单时间", "销售员", "类型", "姓名", "电话", "地址", "产品详情", "A款", "B款", "总数量", "运费", "总价", "备注"]);
-    }
-
-    // 数据填充
-    allOrders.forEach((o, index) => {
-      const row = [];
-      if (isSupply) {
-        // 供应链版 (无价格)
-        const orderNo = "PRO-" + new Date(o.created_at).getTime() + "-" + index;
-        row.push(
-          orderNo, 
-          o.customer_name, 
-          o.phone, 
-          o.address, 
-          o.product, 
-          o.total_qty, 
-          o.remarks || ""
-        );
-      } else {
-        // 财务版 (全数据)
-        row.push(
-          new Date(o.created_at).toLocaleString(),
-          o.account,
-          o.order_type,
-          o.customer_name,
-          o.phone,
-          o.address,
-          o.product,
-          o.qty_a,
-          o.qty_b,
-          o.total_qty,
-          o.shipping,
-          o.total_price,
-          o.remarks || ""
-        );
-      }
-      wsData.push(row);
+    allOrders.forEach(o => {
+      wsData.push([
+        o.id,              // 订单号
+        "",                // 买家会员名
+        o.customer_name,   // 姓名
+        o.phone,           // 手机
+        "",                // 电话
+        "", "", "",        // 省市区 (留空)
+        o.address,         // 详细地址
+        "日用品",          // 物品分类
+        o.product,         // 物品名称
+        o.total_qty,       // 物品数量 (新增)
+        o.remarks || ""    // 备注
+      ]);
     });
 
-    // 创建 Excel
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // 设置红色备注样式
+    
+    // 样式设置 (第13列 M列 红色加粗)
     const range = XLSX.utils.decode_range(ws['!ref']);
-    const remarkColIndex = isSupply ? 6 : 12; // 备注列位置
-
-    for (let R = 1; R <= range.e.r; ++R) {
-      const cellRef = XLSX.utils.encode_cell({r: R, c: remarkColIndex});
-      if (ws[cellRef]) {
-        ws[cellRef].s = { font: { color: { rgb: "FF0000" }, bold: true } };
-      }
+    for(let R=1; R<=range.e.r; ++R) {
+      const cell = XLSX.utils.encode_cell({r:R, c:12}); 
+      if(ws[cell]) ws[cell].s = { font: { color: { rgb: "FF0000" }, bold: true } };
     }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    
-    const fileName = isSupply ? 
-      `发货单_供应链_${new Date().toISOString().split('T')[0]}.xlsx` : 
-      `销售统计_内部_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
 
-    XLSX.writeFile(wb, fileName);
+  function exportFinance() {
+    const ws = XLSX.utils.json_to_sheet(allOrders);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "财务明细");
+    XLSX.writeFile(wb, `财务对账单.xlsx`);
+  }
+
+  // === V5.0 导入回填 ===
+  async function handleImport(input) {
+    const file = input.files[0];
+    if(!file) return;
+
+    document.getElementById("importStatus").innerText = "正在解析...";
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, {type: 'array'});
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet);
+      
+      let count = 0;
+      for(let row of json) {
+        // 尝试匹配列名
+        const orderId = row['订单号'] || row['Order ID'];
+        const trackNo = row['运单号'] || row['快递单号'] || row['Tracking Number'];
+        
+        if(orderId && trackNo) {
+          const { error } = await window.sb.from('orders')
+            .update({ tracking_number: trackNo, status: 'shipped' })
+            .eq('id', orderId); 
+          
+          if(!error) count++;
+        }
+      }
+      
+      alert(`✅ 导入完成！成功更新了 ${count} 条发货状态。`);
+      input.value = ""; 
+      loadData(); 
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   async function logout() {
-    if(confirm("确定退出管理后台？")) {
-      await window.sb.auth.signOut();
-      location.href = "sales.html";
-    }
+    await window.sb.auth.signOut();
+    location.href = "sales.html";
   }
 </script>
-
-<footer style="margin-top:40px; text-align:center; font-size:12px; color:#999;">
-  Pro Player Admin System V4.1<br>
-  © Developed by Mars-老刘 & AI
-</footer>
-
 </body>
 </html>
