@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V8.3</title>
+  <title>Pro Player · 总控台 V9.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+  <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
 
   <script>
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
@@ -14,44 +15,47 @@
   </script>
 
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
+    /* 10. 统一字体 */
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Roboto, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
     
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
     .clock { font-size: 14px; color: #007aff; font-weight: bold; margin-top: 5px; font-family: monospace; }
     
-    .stats-box { display: flex; gap: 15px; margin-bottom: 20px; }
-    .card { background: #fff; padding: 15px; border-radius: 8px; flex: 1; border-left: 4px solid #007aff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .num { font-size: 24px; font-weight: bold; margin-top: 5px; }
+    .stats-box { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+    .card { background: #fff; padding: 15px; border-radius: 12px; flex: 1; min-width: 120px; border-left: 4px solid #007aff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .num { font-size: 24px; font-weight: 800; margin-top: 5px; }
+    .label { font-size: 12px; color: #888; font-weight: 600; }
 
-    .bar-box { background: #fff; padding: 10px; margin-bottom: 20px; border-radius: 8px; }
+    .bar-box { background: #fff; padding: 10px; margin-bottom: 20px; border-radius: 12px; }
     .bar-track { display: flex; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; margin-top: 5px; }
-    .bar-part { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; transition: width 0.3s; }
+    .bar-part { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; transition: width 0.5s; }
 
     .btn-group { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-    button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; transition: opacity 0.2s; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; background: #999 !important; } /* 禁用样式 */
+    button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; font-family: inherit; transition: opacity 0.2s; }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     
-    .btn-blue { background: #007aff; }
-    .btn-green { background: #34c759; }
-    .btn-orange { background: #ff9500; }
-    .btn-red { background: #ff3b30; }
-    .btn-gray { background: #eee; color: #333; }
+    .btn-b { background: #007aff; } .btn-g { background: #34c759; } .btn-o { background: #ff9500; } .btn-r { background: #ff3b30; } .btn-gy { background: #666; } .btn-bk { background: #000; }
 
-    .table-container { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 200px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+    .table-container { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 200px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1000px; }
     th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
     th { background: #fafafa; white-space: nowrap; font-weight: 600; color: #555; }
-    tr:hover { background: #f9f9f9; }
+    tr:hover { filter: brightness(0.98); }
     
-    /* 流水号样式 */
-    .seq-id { font-family: monospace; font-weight: bold; color: #333; background: #eee; padding: 2px 6px; border-radius: 4px; }
+    /* 9. 行变色逻辑 */
+    tr.gift-row { background: #fff3e0; } /* 橙色 */
+    tr.internal-row { background: #efebe9; } /* 棕色 */
     
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 1000; }
+    .seq-id { font-family: monospace; font-weight: bold; background: #eee; padding: 2px 6px; border-radius: 4px; }
+    
+    /* 1. 单条修改弹窗 */
+    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 2000; }
     .modal.show { display: flex; }
-    .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
-    input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    .modal-box { background: #fff; padding: 24px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    input, textarea, select { font-family: inherit; width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
     
-    #loader { text-align: center; padding: 40px; color: #888; }
+    .edit-btn { background: #eee; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-left: 5px; }
   </style>
 </head>
 
@@ -59,22 +63,22 @@
 
 <div class="header">
   <div>
-    <span style="font-size: 20px; font-weight: bold;">Pro Player 总控台 V8.3</span>
-    <span id="clock" class="clock">🕒 同步中...</span>
+    <span style="font-size: 20px; font-weight: 800;">Pro Player 总控 V9.0</span>
+    <span id="clock" class="clock">🕒 ...</span>
   </div>
-  <button class="btn-gray" onclick="location.href='sales.html'">返回销售端</button>
+  <button class="btn-gy" onclick="location.href='sales.html'">返回销售</button>
 </div>
 
 <div class="stats-box">
-  <div class="card"><div>今日订单</div><div class="num" id="vOrder">0</div></div>
-  <div class="card" style="border-color:#34c759"><div>今日营收</div><div class="num" id="vMoney">¥0</div></div>
-  <div class="card" style="border-color:#ff9500"><div>待发货</div><div class="num" id="vPending">0</div></div>
+  <div class="card"><div class="label">今日订单</div><div class="num" id="sToday">0</div></div>
+  <div class="card" style="border-color:#34c759"><div class="label">今日营收</div><div class="num" id="sMoney">¥0</div></div>
+  <div class="card" style="border-color:#000"><div class="label">累计订单</div><div class="num" id="sTotal">0</div></div>
+  <div class="card" style="border-color:#666"><div class="label">累计张数</div><div class="num" id="sSheets">0</div></div>
+  <div class="card" style="border-color:#ff9500"><div class="label">待发货</div><div class="num" id="sPending">0</div></div>
 </div>
 
 <div class="bar-box">
-  <div style="font-size:12px; font-weight:bold;">
-    <span style="color:#007aff">● A款(粗)</span> <span style="color:#ff9500; margin-left:10px;">● B款(细)</span>
-  </div>
+  <div style="font-size:12px; font-weight:bold;">历史全量占比 (A款 vs B款)</div>
   <div class="bar-track">
     <div id="barA" class="bar-part" style="background:#007aff; width:50%">A:0</div>
     <div id="barB" class="bar-part" style="background:#ff9500; width:50%">B:0</div>
@@ -82,14 +86,15 @@
 </div>
 
 <div class="btn-group">
-  <button class="btn-blue" onclick="exportCainiao()">📤 导出菜鸟</button>
-  <button class="btn-green" onclick="exportFinance()">💰 导出财务</button>
-  <button class="btn-orange" onclick="openGift()">🎁 录入赠送</button>
-  <button class="btn-red" onclick="delSel()">🗑 删除选中</button>
-  <button class="btn-gray" onclick="loadData()">🔄 刷新数据</button>
+  <button class="btn-b" onclick="expCainiao()">📤 导出菜鸟 (增量)</button>
+  <button class="btn-g" onclick="expFin()">💰 导出财务</button>
+  <button class="btn-o" onclick="openGift()">🎁 录入赠送</button>
+  <button class="btn-bk" onclick="backupData()">💾 数据备份</button>
+  <button class="btn-r" onclick="delSel()">🗑 删除</button>
+  <button class="btn-gy" onclick="loadData()">🔄 刷新 (每300s自动)</button>
   
-  <input type="file" id="fileIn" accept=".xlsx" style="display:none" onchange="doImport(this)">
-  <button class="btn-gray" style="margin-left:auto" onclick="document.getElementById('fileIn').click()">📥 导入回执</button>
+  <input type="file" id="fIn" style="display:none" onchange="imp(this)">
+  <button class="btn-gy" style="margin-left:auto" onclick="document.getElementById('fIn').click()">📥 导入回执</button>
 </div>
 
 <div class="table-container">
@@ -97,233 +102,320 @@
     <thead>
       <tr>
         <th width="30"><input type="checkbox" onchange="checkAll(this)"></th>
-        <th>编号 (No.)</th><th>下单时间</th><th>销售员</th><th>收件信息</th><th>产品</th><th>A/B明细</th><th>数量</th><th>总价</th><th>状态</th><th>备注</th>
+        <th>No.</th><th>时间</th><th>销售</th><th>收件信息</th><th>产品</th><th>A/B</th><th>数</th><th>价</th><th>状态</th><th>备注</th><th>操作</th>
       </tr>
     </thead>
-    <tbody id="tbody">
-      <tr><td colspan="11" style="text-align:center; padding:20px;">数据加载中...</td></tr>
-    </tbody>
+    <tbody id="tbody"></tbody>
   </table>
+</div>
+
+<div id="editModal" class="modal">
+  <div class="modal-box">
+    <h3>✏️ 修改订单</h3>
+    <input type="hidden" id="eId">
+    <label>姓名</label><input id="eName">
+    <label>电话</label><input id="ePhone">
+    <label>地址</label><textarea id="eAddr" rows="2"></textarea>
+    <div style="display:flex; gap:10px"><div style="flex:1"><label>A款</label><input type="number" id="eQa"></div><div style="flex:1"><label>B款</label><input type="number" id="eQb"></div></div>
+    <label>备注 (自动追加修改记录)</label><input id="eRem">
+    <div style="display:flex; gap:10px">
+      <button class="btn-gy" style="flex:1" onclick="document.getElementById('editModal').classList.remove('show')">取消</button>
+      <button class="btn-b" style="flex:1" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
 </div>
 
 <div id="giftModal" class="modal">
   <div class="modal-box">
     <h3>🎁 赠送单</h3>
+    <button onclick="openOcr()" style="width:100%;margin-bottom:10px;background:#eee;border:none;padding:8px;border-radius:6px;">📷 智能识别</button>
+    
     <label>类型</label><select id="gt"><option>活动赠送</option><option>选手推广</option></select>
     <label>姓名</label><input id="gn">
     <label>电话</label><input id="gp">
-    <label>地址</label><textarea id="ga" rows="2"></textarea>
+    <label>地址</label><input id="ga">
     <div style="display:flex; gap:10px">
-      <div style="flex:1"><label>A款数</label><input type="number" id="gqa" value="0"></div>
-      <div style="flex:1"><label>B款数</label><input type="number" id="gqb" value="0"></div>
+      <div style="flex:1"><label>A款</label><input type="number" id="gqa" value="0"></div>
+      <div style="flex:1"><label>B款</label><input type="number" id="gqb" value="0"></div>
     </div>
     <label>备注</label><input id="gr">
-    <div style="display:flex; gap:10px; margin-top:10px">
-      <button class="btn-gray" style="flex:1" onclick="document.getElementById('giftModal').classList.remove('show')">取消</button>
-      <button id="giftSubmitBtn" class="btn-orange" style="flex:1" onclick="submitGift()">确认</button>
+    <div style="display:flex; gap:10px">
+      <button class="btn-gy" style="flex:1" onclick="document.getElementById('giftModal').classList.remove('show')">取消</button>
+      <button id="giftBtn" class="btn-o" style="flex:1" onclick="subGift()">确认</button>
     </div>
   </div>
 </div>
 
-<script>
-  let allData = [];
+<div id="ocrBox" class="modal">
+  <div class="modal-box">
+    <h3>智能填充</h3>
+    <textarea id="ocrText" rows="5" placeholder="粘贴整段地址..."></textarea>
+    <button class="btn-b" onclick="runOcr()" style="width:100%">识别填充</button>
+    <button class="btn-gy" onclick="document.getElementById('ocrBox').classList.remove('show')" style="width:100%;margin-top:5px">关闭</button>
+  </div>
+</div>
 
-  // 1. 启动
+<script>
+  let DB = [];
+  const IS_MOBILE = window.innerWidth < 768; // 16. 判断设备
+
   window.onload = () => {
     setInterval(() => document.getElementById('clock').innerText = "🕒 " + new Date().toLocaleTimeString(), 1000);
     loadData();
+    setInterval(loadData, 300000); // 13. 自动刷新 (300s)
   };
 
-  // 2. 读取 (按 seq_id 倒序，新单在最上面)
+  // 5. 排序逻辑：seq_id 倒序 (No.大的在上面)
   async function loadData() {
-    const tbody = document.getElementById("tbody");
-    
-    // 如果你刚跑完 SQL，seq_id 字段就有了。如果没跑，会报错，这里做了兼容。
-    const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
-
-    if (error) {
-      alert("读取失败: " + error.message);
-      return;
-    }
-
-    allData = data || [];
-    renderTable();
-    calcStats();
+    const { data, error } = await window.sb.from("orders").select("*").order("seq_id", {ascending:false});
+    if (error) return alert("Error: " + error.message);
+    DB = data || [];
+    render();
+    stats();
   }
 
-  // 3. 渲染
-  function renderTable() {
-    const tbody = document.getElementById("tbody");
-    tbody.innerHTML = "";
-    
-    if (allData.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">暂无数据</td></tr>`;
-      return;
-    }
+  function render() {
+    const box = document.getElementById("tbody");
+    box.innerHTML = "";
+    if(!DB.length) { box.innerHTML = "<tr><td colspan='11' style='text-align:center'>无数据</td></tr>"; return; }
 
-    allData.forEach(r => {
-      try {
-        const tr = document.createElement("tr");
-        
-        // 优先显示 seq_id (流水号)，如果没有则显示 UUID 前8位
-        const displayId = r.seq_id ? `<span class="seq-id">No.${r.seq_id}</span>` : `<span style="color:#999">${(r.id||"").substr(0,8)}</span>`;
-        
-        const time = r.created_at ? new Date(r.created_at).toLocaleString() : "-";
-        const account = (r.account || "").split("@")[0];
-        const name = r.customer_name || "无名";
-        const phone = r.phone || "";
-        const qa = Number(r.qty_a) || 0;
-        const qb = Number(r.qty_b) || 0;
-        const total = Number(r.total_qty) || (qa + qb);
-        const price = Number(r.total_price) || 0;
-        let remarks = r.remarks || "";
+    DB.forEach(r => {
+      const tr = document.createElement("tr");
+      
+      // 9. 行变色
+      if(r.total_price === 0) tr.classList.add("gift-row");
+      else if(r.remarks && r.remarks.includes("内购")) tr.classList.add("internal-row");
 
-        const statusHtml = r.tracking_number 
-          ? `<span style="color:green; font-weight:bold;">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank" style="color:green; font-size:12px;">${r.tracking_number}</a></span>`
-          : `<span style="color:#ff9500;">待发货</span>`;
+      const seq = r.seq_id ? `<span class="seq-id">No.${r.seq_id}</span>` : "-";
+      const time = new Date(r.created_at).toLocaleString();
+      const acc = (r.account||"").split("@")[0];
+      
+      // 16. 点击拨号
+      const ph = IS_MOBILE ? `<a href="tel:${r.phone}">${r.phone}</a>` : r.phone;
+      
+      const st = r.tracking_number 
+        ? `<span style='color:green;font-weight:bold'>已发<br>${r.tracking_number}</span>` 
+        : `<span style='color:orange'>待发</span>`;
 
-        if (remarks.includes("内购") || remarks.includes("赠送")) remarks = `<span style="color:green; font-weight:bold;">${remarks}</span>`;
-        const priceHtml = (price === 0) ? `<span style="color:#ff9500; font-weight:bold;">赠送</span>` : `¥${price}`;
-
-        tr.innerHTML = `
-          <td><input type="checkbox" class="chk" value="${r.id}"></td>
-          <td>${displayId}</td>
-          <td style="font-size:12px;">${time}</td>
-          <td>${account}</td>
-          <td><div style="font-weight:bold;">${name}</div><div style="font-size:12px; color:#666;">${phone}</div></td>
-          <td>ProPlayer鼠标垫</td>
-          <td style="font-size:12px; color:#666;">A:${qa} / B:${qb}</td>
-          <td style="font-weight:bold; text-align:center;">${total}</td>
-          <td style="color:#007aff;">${priceHtml}</td>
-          <td>${statusHtml}</td>
-          <td class="remark-cell" title="${r.remarks}">${remarks}</td>
-        `;
-        tbody.appendChild(tr);
-      } catch (e) { console.error(e); }
+      tr.innerHTML = `
+        <td><input type="checkbox" class="chk" value="${r.id}"></td>
+        <td>${seq}</td>
+        <td style="font-size:12px">${time}</td>
+        <td>${acc}</td>
+        <td><b>${r.customer_name}</b><br>${ph}</td>
+        <td>鼠标垫</td>
+        <td>A:${r.qty_a}/B:${r.qty_b}</td>
+        <td><b>${r.total_qty}</b></td>
+        <td>${r.total_price}</td>
+        <td>${st}</td>
+        <td class="remark-cell" title="${r.remarks}">${r.remarks||""}</td>
+        <td><button class="edit-btn" onclick='openEdit(${JSON.stringify(r)})'>✏️</button></td>
+      `;
+      box.appendChild(tr);
     });
   }
 
-  // 4. 统计
-  function calcStats() {
-    const todayStr = new Date().toISOString().split("T")[0];
-    let n=0, m=0, p=0, sa=0, sb=0;
-    allData.forEach(r => {
-      if (r.created_at && r.created_at.includes(todayStr)) { n++; m += (Number(r.total_price) || 0); }
-      if (!r.tracking_number) p++;
-      sa += (Number(r.qty_a) || 0); sb += (Number(r.qty_b) || 0);
+  // 11. 累计统计
+  function stats() {
+    const today = new Date().toISOString().split("T")[0];
+    let todayN=0, todayM=0, pending=0, totalN=0, totalSheets=0, totalA=0, totalB=0;
+    
+    DB.forEach(r => {
+      // 全量统计
+      totalN++;
+      totalSheets += (r.total_qty || 0);
+      totalA += (r.qty_a || 0);
+      totalB += (r.qty_b || 0);
+      if(!r.tracking_number) pending++;
+
+      // 今日统计
+      if(r.created_at.includes(today)) {
+        todayN++;
+        todayM += (r.total_price || 0);
+      }
     });
-    document.getElementById("vOrder").innerText = n;
-    document.getElementById("vMoney").innerText = "¥" + m;
-    document.getElementById("vPending").innerText = p;
-    const t = sa + sb;
-    if (t > 0) {
-      const pa = Math.round((sa / t) * 100);
-      document.getElementById("barA").style.width = pa + "%"; document.getElementById("barA").innerText = `A: ${pa}% (${sa})`;
-      document.getElementById("barB").style.width = (100 - pa) + "%"; document.getElementById("barB").innerText = `B: ${100 - pa}% (${sb})`;
+
+    document.getElementById("sToday").innerText = todayN;
+    document.getElementById("sMoney").innerText = "¥" + todayM;
+    document.getElementById("sTotal").innerText = totalN;
+    document.getElementById("sSheets").innerText = totalSheets;
+    document.getElementById("sPending").innerText = pending;
+
+    // 12. 全量柱状图
+    const t = totalA + totalB;
+    if(t>0) {
+      const pa = Math.round(totalA/t*100);
+      document.getElementById("barA").style.width = pa+"%"; document.getElementById("barA").innerText = `A:${pa}% (${totalA})`;
+      document.getElementById("barB").style.width = (100-pa)+"%"; document.getElementById("barB").innerText = `B:${100-pa}% (${totalB})`;
     }
   }
 
-  function openGift() { document.getElementById('giftModal').classList.add('show'); }
+  // 4. 编辑逻辑 (含自动备注更新)
+  function openEdit(r) {
+    document.getElementById("eId").value = r.id;
+    document.getElementById("eName").value = r.customer_name;
+    document.getElementById("ePhone").value = r.phone;
+    document.getElementById("eAddr").value = r.address;
+    document.getElementById("eQa").value = r.qty_a;
+    document.getElementById("eQb").value = r.qty_b;
+    document.getElementById("eRem").value = r.remarks || "";
+    document.getElementById("editModal").classList.add("show");
+  }
+
+  async function saveEdit() {
+    const id = document.getElementById("eId").value;
+    const qa = Number(document.getElementById("eQa").value);
+    const qb = Number(document.getElementById("eQb").value);
+    const oldR = document.getElementById("eRem").value;
+    // 4. 自动追加 Log
+    const newR = `${oldR} | [Admin改:${new Date().toLocaleTimeString()}]`;
+    
+    const {error} = await window.sb.from("orders").update({
+      customer_name: document.getElementById("eName").value,
+      phone: document.getElementById("ePhone").value,
+      address: document.getElementById("eAddr").value,
+      qty_a: qa, qty_b: qb, total_qty: qa+qb, product: `A款:${qa}, B款:${qb}`,
+      remarks: newR
+    }).eq("id", id);
+    
+    if(error) alert(error.message); else { alert("修改成功"); document.getElementById("editModal").classList.remove("show"); loadData(); }
+  }
+
+  // 3. 赠送 + OCR
+  function openGift(){ document.getElementById('giftModal').classList.add('show'); }
+  function openOcr(){ document.getElementById('ocrBox').classList.add('show'); }
   
-  // ✅ 核心修复：按钮防抖 (Disabled Logic)
-  async function submitGift() {
-    const btn = document.getElementById("giftSubmitBtn");
-    const n = document.getElementById('gn').value;
-    const qa = Number(document.getElementById('gqa').value);
-    const qb = Number(document.getElementById('gqb').value);
+  function runOcr() {
+    const txt = document.getElementById("ocrText").value;
+    const ph = txt.match(/1[3-9]\d{9}/)?.[0]||"";
+    let rem = txt.replace(ph,"").replace(/收货人|收件人|电话|手机|地址|：|:/g," ").replace(/\s+/g," ").trim();
+    let nm="", ad=""; const pts=rem.split(" ");
+    for(let p of pts){ if(!nm && p.length>=2 && p.length<=4)nm=p; else ad+=p; }
+    document.getElementById("gn").value = nm; document.getElementById("gp").value = ph; document.getElementById("ga").value = ad;
+    document.getElementById("ocrBox").classList.remove('show');
+  }
+
+  async function subGift() {
+    const btn = document.getElementById("giftBtn");
+    const n = document.getElementById("gn").value;
+    const qa = Number(document.getElementById("gqa").value);
+    const qb = Number(document.getElementById("gqb").value);
     
-    if(!n || (qa+qb)<=0) return alert("请填写姓名和数量");
+    if(!n || (qa+qb)<=0) return alert("信息不全");
     
-    // 1. 立刻禁用按钮，防止连点
-    btn.disabled = true;
-    btn.innerText = "处理中...";
+    // 防连点
+    btn.disabled = true; btn.innerText = "处理中...";
     
-    const { error } = await window.sb.from("orders").insert({
-      account: "admin_gift",
-      customer_name: n,
-      phone: document.getElementById('gp').value,
-      address: document.getElementById('ga').value,
-      qty_a: qa, qty_b: qb, total_qty: qa+qb,
-      product: `A款:${qa}, B款:${qb}`,
-      total_price: 0, shipping: 0,
-      status: "pending",
-      remarks: `[${document.getElementById('gt').value}] ${document.getElementById('gr').value}`,
-      item_category: "日用品"
+    const {error} = await window.sb.from("orders").insert({
+      account: "admin_gift", customer_name: n, phone: document.getElementById("gp").value, address: document.getElementById("ga").value,
+      qty_a: qa, qty_b: qb, total_qty: qa+qb, product: `A款:${qa}, B款:${qb}`, total_price: 0, shipping: 0,
+      status: "pending", remarks: `[${document.getElementById("gt").value}] ${document.getElementById("gr").value}`, item_category: "日用品"
     });
     
-    // 2. 无论成功失败，恢复按钮状态（如果是成功，稍后会刷新页面，恢复也无所谓）
-    btn.disabled = false;
-    btn.innerText = "确认";
+    btn.disabled = false; btn.innerText = "确认";
+    if(error) alert(error.message); else { alert("成功"); document.getElementById("giftModal").classList.remove("show"); loadData(); }
+  }
+
+  // 7. 增量导出逻辑
+  function expCainiao() {
+    if(!DB.length) return alert("无数据");
     
-    if(error) {
-      alert("提交失败: " + error.message);
-    } else {
-      alert("✅ 录入成功");
-      document.getElementById('giftModal').classList.remove('show');
-      loadData();
+    // 询问增量
+    const lastId = localStorage.getItem("lastExportSeq") || 0;
+    const onlyNew = confirm(`上次导出到 No.${lastId}。\n\n是否仅高亮显示新数据 (No.${lastId} 之后)？\n\n[确定] = 仅高亮新数据\n[取消] = 全部导出且不区分`);
+    
+    // 6. 时间戳文件名
+    const timeStr = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '');
+    const fname = `菜鸟发货单_${timeStr}.xlsx`;
+
+    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
+    const d = [["","收件信息","","","物品信息","","","备注","","回填区"], h];
+    
+    let maxSeq = 0;
+    DB.forEach(r => {
+      if(r.seq_id > maxSeq) maxSeq = r.seq_id;
+      let desc = `ProPlayer鼠标垫`;
+      if(r.qty_a) desc += ` (A款粗*${r.qty_a})`; if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
+      
+      // 标记新旧: 给 row 对象加个 _isNew 属性，方便后面上色
+      const isNew = onlyNew && (r.seq_id > lastId);
+      const row = [r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""];
+      if(isNew) row._isNew = true; // 标记
+      d.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(d);
+    
+    // 样式上色
+    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    // 遍历单元格
+    for(let R=0; R<=range.e.r; ++R) {
+      // 检查这一行是不是新数据 (d[R]对应Excel第R行)
+      const isNewRow = d[R] && d[R]._isNew;
+      
+      for(let C=0; C<=range.e.c; ++C) {
+        const addr = XLSX.utils.encode_cell({r:R, c:C});
+        if(!ws[addr]) continue;
+        
+        ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
+        
+        if(R < 2) { ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; ws[addr].s.font = { bold: true }; }
+        
+        // 7. 新数据标蓝
+        if(isNewRow) {
+          ws[addr].s.font = { color: { rgb: "0000FF" }, bold: true }; // 蓝色字体
+        } else if (onlyNew && R >= 2) {
+          ws[addr].s.font = { color: { rgb: "999999" } }; // 旧数据标灰
+        }
+        
+        if(R>=2 && C===7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
+        if(R>=2 && C===9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
+      }
     }
+    
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, fname);
+    
+    // 更新记录
+    if(onlyNew) localStorage.setItem("lastExportSeq", maxSeq);
+  }
+
+  function expFin() {
+    const d = [["流水号", "时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
+    DB.forEach(r => d.push([r.seq_id, new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发":"未发", r.remarks, r.tracking_number]));
+    const ws = XLSX.utils.aoa_to_sheet(d); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务"); XLSX.writeFile(wb, "财务单.xlsx");
+  }
+
+  // 14. 备份功能
+  function backupData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DB));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", "ProPlayer_Backup_" + new Date().toISOString() + ".json");
+    dlAnchorElem.click();
   }
 
   function checkAll(el) { document.querySelectorAll(".chk").forEach(c => c.checked = el.checked); }
-  
   async function delSel() {
     const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
     if(!ids.length) return alert("没选");
-    if(confirm(`⚠️ 确定删除这 ${ids.length} 条数据吗？`)) {
-      await window.sb.from("orders").delete().in("id", ids);
-      loadData();
-    }
+    if(confirm("确定删除?")) { await window.sb.from("orders").delete().in("id", ids); loadData(); }
   }
-
-  // 导出逻辑
-  function exportCainiao() {
-    if(!allData.length) return alert("无数据");
-    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
-    const d = [["","收件信息","","","物品信息","","","备注","","回填区"], h];
-    allData.forEach(r => {
-      let desc = "ProPlayer鼠标垫";
-      if(r.qty_a) desc += ` (A款粗*${r.qty_a})`;
-      if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
-      d.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(d);
-    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for(let R=0; R<=range.e.r; ++R) {
-      for(let C=0; C<=range.e.c; ++C) {
-        const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
-        if(!cell) continue;
-        cell.s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
-        if(R < 2) { cell.s.fill = { fgColor: { rgb: "CCFFCC" } }; cell.s.font = { bold: true }; }
-        if(R >= 2 && C === 7) cell.s.font = { color: { rgb: "FF0000" }, bold: true };
-        if(R >= 2 && C === 9) cell.s.fill = { fgColor: { rgb: "FFFFCC" } };
-      }
-    }
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, "菜鸟发货单.xlsx");
-  }
-
-  function exportFinance() {
-    const body = [["流水号", "时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
-    allData.forEach(r => body.push([r.seq_id || "-", new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发":"未发", r.remarks, r.tracking_number]));
-    const ws = XLSX.utils.aoa_to_sheet(body);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务");
-    XLSX.writeFile(wb, "财务单.xlsx");
-  }
-
-  async function doImport(el) {
-    const f = el.files[0]; if(!f) return;
-    const r = new FileReader();
-    r.onload = async (e) => {
-      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {range:1});
-      let n = 0;
+  async function imp(el) {
+    const f=el.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=async(e)=>{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{range:1});
+      let n=0;
       for(let row of rows) {
-        let oid, track;
-        for(let k in row) { if(k.includes("编号")) oid = row[k]; if(k.includes("回填") || k.includes("运单")) track = row[k]; }
-        if(oid && track) { const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid); if(!error) n++; }
+        let oid, trk;
+        for(let k in row) { if(k.includes("编号")) oid=row[k]; if(k.includes("回填")||k.includes("运单")) trk=row[k]; }
+        if(oid && trk) { const{error}=await window.sb.from("orders").update({tracking_number:trk, status:'shipped'}).eq("id",oid); if(!error) n++; }
       }
-      alert(`✅ 更新 ${n} 条`); el.value=""; loadData();
+      alert(`已更新 ${n} 条`); el.value=""; loadData();
     };
     r.readAsArrayBuffer(f);
   }
