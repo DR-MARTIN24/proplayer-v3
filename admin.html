@@ -2,206 +2,112 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V6.0</title>
+  <title>Pro Player · X光透视仪 (Debug)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
-
-  <script>
-    // 确保这里没有空格
-    const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T"; 
-    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  </script>
-
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 1100px; margin: auto; background: #f5f7fa; }
-    h2 { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-    .dashboard { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-    .stat-card { flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .stat-val { font-size: 28px; font-weight: bold; margin-top: 5px; }
-    .toolbar { background: #fff; padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    button { padding: 10px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; color:#fff; }
-    button:active { transform: scale(0.98); }
-    .btn-export { background: #007aff; }
-    .btn-finance { background: #34c759; }
-    .btn-import { background: #5856d6; }
-    .btn-logout { background: #ff3b30; }
-    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-    th { background: #f4f4f4; color: #555; }
-    .remark-cell { color: #d70015; font-weight: 500; }
-    .status-shipped { color: green; font-weight: bold; }
-    .status-pending { color: orange; }
-    #fileInput { display: none; }
-    #errorBanner { background: #ffeded; color: #ff3b30; padding: 10px; border-radius: 5px; margin-bottom: 15px; display:none; border: 1px solid #ffcccc; }
+    body { background: #000; color: #0f0; font-family: "Courier New", monospace; padding: 20px; font-size: 14px; word-wrap: break-word; }
+    h1 { border-bottom: 1px solid #0f0; padding-bottom: 10px; }
+    .btn { background: #333; color: #fff; border: 1px solid #fff; padding: 10px 20px; margin: 10px 0; font-size: 16px; cursor: pointer; }
+    #console { white-space: pre-wrap; margin-top: 20px; }
+    .error { color: #f00; font-weight: bold; }
+    .warn { color: #ff0; }
   </style>
 </head>
-
 <body>
 
-<div style="display:flex; justify-content:space-between; align-items:center;">
-  <h2>Pro Player 总控台 V6.0</h2>
-  <button class="btn-logout" onclick="logout()">安全退出</button>
+<h1>🕵️‍♂️ 数据库 X 光透视仪</h1>
+<p>此页面用于强制读取数据库内容，忽略所有 UI 逻辑。</p>
+
+<div>
+  <button class="btn" onclick="forceFetch()">🚀 强制读取数据</button>
+  <button class="btn" onclick="checkUser()">👤 检查我的身份</button>
+  <button class="btn" onclick="location.href='sales.html'">🔙 返回 Sales</button>
 </div>
 
-<div id="errorBanner"></div>
-
-<div class="dashboard">
-  <div class="stat-card">
-    <div style="color:#888; font-size:12px;">今日订单</div>
-    <div class="stat-val" id="sOrders">0</div>
-  </div>
-  <div class="stat-card">
-    <div style="color:#888; font-size:12px;">今日营收</div>
-    <div class="stat-val" id="sMoney">¥0.00</div>
-  </div>
-  <div class="stat-card">
-    <div style="color:#888; font-size:12px;">待发货</div>
-    <div class="stat-val" id="sPending" style="color:orange">0</div>
-  </div>
-</div>
-
-<div class="toolbar">
-  <button class="btn-export" onclick="exportCainiao()">📤 导出菜鸟发货单 (V2)</button>
-  <button class="btn-finance" onclick="exportFinance()">💰 导出内部财务单</button>
-  <div style="width:1px; height:30px; background:#ddd; margin:0 10px;"></div>
-  <button class="btn-import" onclick="document.getElementById('fileInput').click()">📥 导入发货回执</button>
-  <input type="file" id="fileInput" accept=".xlsx" onchange="handleImport(this)">
-  <button style="background:#eee; color:#333; margin-left:auto;" onclick="loadData()">🔄 刷新数据</button>
-</div>
-
-<div id="loader" style="text-align:center; padding:20px;">数据加载中...</div>
-
-<table id="dataTable" style="display:none;">
-  <thead>
-    <tr>
-      <th>订单号 (系统ID)</th>
-      <th>时间</th>
-      <th>销售</th>
-      <th>收件人</th>
-      <th>产品</th>
-      <th>总数</th>
-      <th>状态</th>
-      <th>备注</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
-</table>
+<div id="console">准备就绪，请点击上方按钮...</div>
 
 <script>
-  let allOrders = [];
-  const MY_ADMIN_EMAIL = "169351@qq.com"; // 管理员邮箱
+  // ============================================
+  // 1. 请务必核对这行地址，必须和 sales.html 里的一模一样！
+  // 哪怕少一个字母都不行
+  const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T"; 
+  // ============================================
 
-  (async () => {
-    // 检查登录
-    const { data: { user } } = await window.sb.auth.getUser();
-    if (!user) { alert("请先在 Sales 页面登录"); location.href = "sales.html"; return; }
+  const logEl = document.getElementById("console");
+  function log(msg, type = "info") {
+    const color = type === 'error' ? '#f00' : (type === 'warn' ? '#ff0' : '#0f0');
+    logEl.innerHTML += `<div style="color:${color}; margin-bottom:5px;">> ${msg}</div>`;
+  }
+
+  // 初始化
+  let sb;
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    log(`客户端初始化成功\nURL: ${SUPABASE_URL}`);
+  } catch (e) {
+    log(`❌ 客户端初始化失败: ${e.message}`, "error");
+  }
+
+  async function checkUser() {
+    log("正在检查登录状态...");
+    const { data: { session }, error } = await sb.auth.getSession();
+    if (error) return log(`❌ 会话错误: ${error.message}`, "error");
     
-    // 权限检查
-    if (user.email.trim().toLowerCase() !== MY_ADMIN_EMAIL.trim().toLowerCase()) {
-      alert("⚠️ 权限验证失败：您不是管理员！\n当前账号: " + user.email);
-      location.href = "sales.html";
+    if (session) {
+      log(`✅ 当前用户: ${session.user.email}`);
+      log(`   用户ID: ${session.user.id}`);
+      log(`   上次登录: ${new Date(session.user.last_sign_in_at).toLocaleString()}`);
+    } else {
+      log("⚠️ 未检测到登录用户！请先去 sales.html 登录。", "warn");
+    }
+  }
+
+  async function forceFetch() {
+    log("--------------------------------");
+    log("⏳ 开始强制读取 'orders' 表...");
+
+    // 1. 尝试读取 count (总数)
+    const { count, error: countError } = await sb
+      .from("orders")
+      .select("*", { count: "exact", head: true });
+    
+    if (countError) {
+      log(`❌ 连接数据库失败!`, "error");
+      log(`   Code: ${countError.code}`);
+      log(`   Message: ${countError.message}`);
+      log(`   Hint: ${countError.hint || '无提示'}`);
       return;
     }
-    
-    loadData();
-  })();
 
-  async function loadData() {
-    document.getElementById("loader").style.display = "block";
-    document.getElementById("errorBanner").style.display = "none";
-    
-    // 读取数据
-    const { data, error } = await window.sb.from("orders").select("*").order("created_at", { ascending: false });
-    
-    if(error) {
-      document.getElementById("loader").style.display = "none";
-      const banner = document.getElementById("errorBanner");
-      banner.style.display = "block";
-      banner.innerHTML = `<strong>⚠️ 数据读取失败:</strong> ${error.message} <br>可能原因：网络不稳定或Supabase项目已暂停。<button onclick="loadData()" style="margin-left:10px; padding:2px 8px; background:#fff; color:#333; border:1px solid #ccc;">重试</button>`;
+    log(`📊 数据库响应正常。`);
+    log(`🔢 表中总行数: ${count}`);
+
+    if (count === 0) {
+      log("⚠️ 警告：数据库连接成功，但返回行数为 0。", "warn");
+      log("   可能原因：");
+      log("   1. 表里真的没数据 (请去后台确认)");
+      log("   2. RLS 依然在拦截 (虽然你说关了)");
+      log("   3. 你连接了错误的 Project (URL不对)");
       return;
     }
-    
-    allOrders = data;
-    renderTable(data);
-    calcStats(data);
-    document.getElementById("loader").style.display = "none";
-    document.getElementById("dataTable").style.display = "table";
+
+    // 2. 尝试读取实际数据
+    const { data, error } = await sb
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(3);
+
+    if (error) {
+      log(`❌ 读取数据行失败: ${error.message}`, "error");
+    } else {
+      log(`✅ 成功读取到 ${data.length} 条数据！`);
+      log("📝 第一条数据内容:");
+      log(JSON.stringify(data[0], null, 2)); // 打印数据详情
+    }
   }
-
-  function renderTable(data) {
-    const tbody = document.getElementById("tableBody");
-    tbody.innerHTML = "";
-    data.forEach(row => {
-      const tr = document.createElement("tr");
-      const shortId = row.id.split('-')[0];
-      const statusHtml = row.tracking_number 
-        ? `<span class="status-shipped">已发货<br><small>${row.tracking_number}</small></span>` 
-        : `<span class="status-pending">待发货</span>`;
-
-      tr.innerHTML = `
-        <td style="font-family:monospace; color:#666;">...${shortId}</td>
-        <td>${new Date(row.created_at).toLocaleString()}</td>
-        <td>${row.account}</td>
-        <td>${row.customer_name}<br><small>${row.phone}</small></td>
-        <td>${row.product}</td>
-        <td style="font-weight:bold">${row.total_qty}</td>
-        <td>${statusHtml}</td>
-        <td class="remark-cell">${row.remarks || ''}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  function calcStats(data) {
-    const today = new Date().toISOString().split('T')[0];
-    const todays = data.filter(o => o.created_at.startsWith(today));
-    document.getElementById("sOrders").innerText = todays.length;
-    document.getElementById("sMoney").innerText = "¥" + todays.reduce((a,b)=>a+(b.total_price||0),0).toFixed(2);
-    document.getElementById("sPending").innerText = data.filter(o => !o.tracking_number).length;
-  }
-
-  function exportCainiao() {
-    if(!allOrders.length) return;
-    const wsData = [[ "订单号", "买家会员名", "收件人姓名", "收件人手机", "收件人电话", "收件人省", "收件人市", "收件人区", "收件人详细地址", "物品分类", "物品名称", "物品数量", "买家备注" ]];
-    allOrders.forEach(o => {
-      wsData.push([ o.id, "", o.customer_name, o.phone, "", "", "", "", o.address, "日用品", o.product, o.total_qty, o.remarks || "" ]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for(let R=1; R<=range.e.r; ++R) { const cell = XLSX.utils.encode_cell({r:R, c:12}); if(ws[cell]) ws[cell].s = { font: { color: { rgb: "FF0000" }, bold: true } }; }
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
-  }
-
-  function exportFinance() {
-    const ws = XLSX.utils.json_to_sheet(allOrders); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务明细");
-    XLSX.writeFile(wb, `财务对账单.xlsx`);
-  }
-
-  async function handleImport(input) {
-    const file = input.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, {type: 'array'});
-      const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-      let count = 0;
-      for(let row of json) {
-        const orderId = row['订单号'] || row['Order ID'];
-        const trackNo = row['运单号'] || row['快递单号'] || row['Tracking Number'];
-        if(orderId && trackNo) {
-          const { error } = await window.sb.from('orders').update({ tracking_number: trackNo, status: 'shipped' }).eq('id', orderId);
-          if(!error) count++;
-        }
-      }
-      alert(`✅ 导入完成！成功更新了 ${count} 条发货状态。`); input.value = ""; loadData(); 
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  async function logout() { await window.sb.auth.signOut(); location.href = "sales.html"; }
 </script>
 </body>
 </html>
