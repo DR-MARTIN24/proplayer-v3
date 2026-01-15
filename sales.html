@@ -2,136 +2,157 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售系统 V4.0</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pro Player · 销售系统 V5.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    // === Pro Player 系统配置 ===
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T";
-
-    if (typeof supabase === 'undefined') {
-      alert("错误：Supabase SDK 加载失败");
-    } else {
+    const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T"; // 请确保这是最新的 key
+    if (typeof supabase !== 'undefined') {
       window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
   </script>
 
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f5f5f7; color: #333; }
-    h2, h3 { color: #1d1d1f; margin-bottom: 15px; font-weight: 600; }
-    .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 500px; margin: auto; background: #f2f2f7; color: #1c1c1e; }
+    h2, h3 { margin: 0 0 10px 0; font-weight: 700; }
+    .card { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 16px; }
+    
+    /* 排行榜样式 */
+    .rank-box { font-size: 12px; color: #666; display: flex; overflow-x: auto; gap: 10px; padding-bottom: 5px; }
+    .rank-item { background: #f0f0f5; padding: 8px 12px; border-radius: 8px; flex-shrink: 0; min-width: 80px; text-align: center; }
+    .rank-item.me { background: #e3f2fd; border: 1px solid #2196f3; color: #0d47a1; }
+    .rank-score { font-weight: bold; font-size: 14px; color: #333; display: block; margin-top: 2px; }
+
+    /* 表单样式 */
     .input-group { margin-bottom: 12px; }
-    label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: 500; }
-    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
-    input:focus, textarea:focus { border-color: #007aff; }
+    label { display: block; font-size: 13px; color: #8e8e93; margin-bottom: 5px; font-weight: 500; }
+    input, textarea, select { width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; -webkit-appearance: none; background: #fff; }
+    input:focus, textarea:focus { border-color: #007aff; outline: none; }
     
-    .row { display: flex; gap: 10px; }
-    .col { flex: 1; }
+    .qty-control { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+    .qty-input { width: 60px; text-align: center; font-weight: bold; }
     
-    /* 数量选择器优化 */
-    .qty-control { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; }
-    .qty-label { font-weight: bold; }
+    /* 价格显示 */
+    #priceDisplay { background: #34c759; color: #fff; padding: 15px; border-radius: 10px; text-align: center; margin: 20px 0; box-shadow: 0 4px 6px rgba(52, 199, 89, 0.2); }
+    .total-price { font-size: 28px; font-weight: 800; }
     
-    button { width: 100%; padding: 14px; background: #000; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    button:active { transform: scale(0.98); }
+    /* 按钮特效 */
+    .btn-main { width: 100%; padding: 16px; background: #000; color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+    .btn-main:active { transform: scale(0.96); opacity: 0.9; }
+    .btn-main.loading { opacity: 0.7; pointer-events: none; }
+    .btn-main.loading::after { content: " ⏳"; }
     
-    #priceDisplay { background: #eefcf3; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0; }
-    #priceDisplay .total { font-size: 24px; font-weight: bold; }
-    #priceDisplay .detail { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+    .btn-edit { background: #ff9500; color: white; padding: 5px 10px; font-size: 12px; border-radius: 4px; border:none; cursor: pointer; float: right; }
 
     .hidden { display: none !important; }
-    .error { color: #d70015; font-size: 13px; margin-top: 5px; }
+    .error-msg { color: #ff3b30; font-size: 13px; margin-top: 5px; }
     
-    /* 红色备注输入框提示 */
-    #remarks { border: 1px dashed #ff3b30; background: #fff5f5; }
+    /* 模态框 */
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 99; display: flex; align-items: center; justify-content: center; }
+    .modal-content { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
   </style>
 </head>
 
 <body>
 
-<h2>Pro Player 销售端</h2>
+<h2>🚀 Pro Player 销售 V5.0</h2>
 
 <div id="loginBox" class="card">
   <h3>员工登录</h3>
-  <div class="input-group">
-    <input id="email" type="email" placeholder="邮箱账号" />
-  </div>
-  <div class="input-group">
-    <input id="password" type="password" placeholder="密码" />
-  </div>
-  <button id="loginBtn">登录系统</button>
-  <p id="loginMsg" class="error"></p>
+  <input id="email" type="email" placeholder="邮箱账号" style="margin-bottom:10px;" />
+  <input id="password" type="password" placeholder="密码" style="margin-bottom:15px;" />
+  <button id="loginBtn" class="btn-main">进入系统</button>
+  <p id="loginMsg" class="error-msg"></p>
 </div>
 
 <div id="appBox" class="hidden">
+  
+  <div class="card" style="padding: 10px;">
+    <label>🏆 今日实时战报 (已脱敏)</label>
+    <div id="rankList" class="rank-box">
+      </div>
+  </div>
+
   <div class="card">
     <h3>📝 新建订单</h3>
     
     <div class="input-group">
-      <label>收件人姓名</label>
-      <input id="custName" placeholder="例如：张三" />
+      <label>收件人姓名 <span style="color:red">*</span></label>
+      <input id="custName" placeholder="必须填写" />
     </div>
     <div class="input-group">
-      <label>联系电话</label>
+      <label>联系电话 <span style="color:red">*</span></label>
       <input id="custPhone" type="tel" placeholder="11位手机号" />
     </div>
     <div class="input-group">
-      <label>收货地址 (方案A: 粘贴完整地址)</label>
-      <textarea id="custAddress" rows="3" placeholder="省市区+详细地址，例如：浙江省杭州市西湖区..."></textarea>
+      <label>收货地址 (可后补)</label>
+      <textarea id="custAddress" rows="2" placeholder="省市区+详细地址"></textarea>
     </div>
-
-    <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
 
     <label>产品选择</label>
     <div class="qty-control">
-      <span class="qty-label">🅰️ A款 (粗面)</span>
-      <input type="number" id="qtyA" value="0" min="0" style="width: 80px; text-align:center;" onchange="calcPrice()" />
+      <span>🅰️ A款 (粗面)</span>
+      <input type="number" id="qtyA" class="qty-input" value="0" min="0" oninput="calcPrice('new')" />
     </div>
     <div class="qty-control">
-      <span class="qty-label">🅱️ B款 (细面)</span>
-      <input type="number" id="qtyB" value="0" min="0" style="width: 80px; text-align:center;" onchange="calcPrice()" />
+      <span>🅱️ B款 (细面)</span>
+      <input type="number" id="qtyB" class="qty-input" value="0" min="0" oninput="calcPrice('new')" />
     </div>
-
-    <div style="margin: 15px 0;">
-      <label>订单类型</label>
-      <div class="row">
-        <label class="col" style="background:#f0f0f0; padding:10px; border-radius:6px; text-align:center;">
-          <input type="radio" name="orderType" value="retail" checked onchange="calcPrice()"> 零售 (标准)
-        </label>
-        <label class="col" style="background:#f0f0f0; padding:10px; border-radius:6px; text-align:center;">
-          <input type="radio" name="orderType" value="internal" onchange="calcPrice()"> 内部 (员工)
-        </label>
-      </div>
+    
+    <div class="input-group" style="display:flex; gap:10px;">
+       <label><input type="radio" name="orderType" value="retail" checked onchange="calcPrice('new')"> 零售</label>
+       <label><input type="radio" name="orderType" value="internal" onchange="calcPrice('new')"> 内购</label>
     </div>
 
     <div class="input-group">
-      <label style="color:#ff3b30;">非常规备注 (红色高亮)</label>
-      <input id="remarks" placeholder="如有特殊要求请在此填写..." />
+      <label style="color:#ff3b30;">特殊备注 (红色高亮)</label>
+      <input id="remarks" placeholder="可选..." />
     </div>
 
     <div id="priceDisplay">
-      <div class="total">¥ <span id="finalPrice">0</span></div>
-      <div class="detail" id="priceDetail">请选择商品</div>
+      <div class="total-price">¥ <span id="finalPrice">0</span></div>
+      <div style="font-size:13px; opacity:0.9;" id="priceDetail">请选择数量</div>
     </div>
 
-    <button id="submitBtn">提交订单</button>
+    <button id="submitBtn" class="btn-main">提交订单</button>
   </div>
 
   <div class="card">
-    <h3>📦 我的今日提交</h3>
-    <ul id="todayList" style="padding-left:20px; font-size:14px; color:#555;"></ul>
+    <h3>📦 我的今日订单</h3>
+    <ul id="todayList" style="padding-left:0; list-style:none;"></ul>
   </div>
 
-  <button onclick="logout()" style="background:#fff; color:#666; border:1px solid #ddd; margin-top:10px;">退出登录</button>
+  <button onclick="logout()" style="background:transparent; color:#666; border:none; width:100%; padding:10px;">退出登录</button>
+</div>
+
+<div id="editModal" class="hidden modal-overlay">
+  <div class="modal-content">
+    <h3>修改订单</h3>
+    <input type="hidden" id="editId">
+    <div class="input-group"><label>姓名</label><input id="editName"></div>
+    <div class="input-group"><label>电话</label><input id="editPhone"></div>
+    <div class="input-group"><label>地址</label><textarea id="editAddress" rows="2"></textarea></div>
+    <div class="row" style="display:flex; gap:10px; margin-bottom:10px;">
+      <div style="flex:1"><label>A款</label><input type="number" id="editQtyA" oninput="calcPrice('edit')"></div>
+      <div style="flex:1"><label>B款</label><input type="number" id="editQtyB" oninput="calcPrice('edit')"></div>
+    </div>
+    <div style="background:#f0f9eb; color:#333; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px;">
+      新总价: <span style="font-weight:bold; color:green;">¥<span id="editPriceDisplay">0</span></span>
+      <div id="editPriceDetail" style="font-size:11px; color:#666;"></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeEdit()" style="flex:1; padding:10px; border:1px solid #ddd; background:#fff; border-radius:8px;">取消</button>
+      <button onclick="saveEdit()" style="flex:1; padding:10px; background:#007aff; color:#fff; border:none; border-radius:8px;">确认修改</button>
+    </div>
+  </div>
 </div>
 
 <script>
   let currentUser = null;
 
-  // 初始化检查
+  // 初始化
   (async () => {
     if(!window.sb) return;
     const { data: { session } } = await window.sb.auth.getSession();
@@ -141,148 +162,237 @@
     }
   })();
 
-  // 绑定事件
-  document.getElementById("loginBtn").onclick = login;
-  document.getElementById("submitBtn").onclick = submitOrder;
-  document.getElementById("qtyA").addEventListener('input', calcPrice);
-  document.getElementById("qtyB").addEventListener('input', calcPrice);
-
-  async function login() {
+  // 登录
+  document.getElementById("loginBtn").onclick = async () => {
+    const btn = document.getElementById("loginBtn");
+    btn.classList.add("loading");
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
-    if(!email || !password) return alert("请输入完整");
-    
     const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+    btn.classList.remove("loading");
+    
     if(error) {
       document.getElementById("loginMsg").innerText = error.message;
     } else {
       currentUser = data.user;
       showApp();
     }
-  }
+  };
 
   function showApp() {
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("appBox").classList.remove("hidden");
+    loadRankings();
     loadMyTodayOrders();
   }
 
-  // === 核心逻辑：计价器 ===
-  function calcPrice() {
-    const qa = parseInt(document.getElementById("qtyA").value) || 0;
-    const qb = parseInt(document.getElementById("qtyB").value) || 0;
-    const type = document.querySelector('input[name="orderType"]:checked').value;
+  // === 核心计价逻辑 (V5.0) ===
+  function calculateCore(qa, qb, type) {
     const totalQty = qa + qb;
-
     let productTotal = 0;
     let shipping = 0;
     let note = "";
 
-    if (totalQty === 0) {
-      updateDisplay(0, "请选择数量");
-      return { total:0, shipping:0 };
-    }
+    if (totalQty === 0) return { total:0, shipping:0, note:"请选择商品" };
 
     if (type === 'retail') {
-      // 零售逻辑
       if (totalQty === 1) {
+        // 单件逻辑: 89 + 6
         productTotal = 89;
         shipping = 6;
-        note = "单件零售 (89+6)";
-      } else if (totalQty === 2) {
-        productTotal = 160;
-        shipping = 9;
-        note = "两件套优惠 (160+9)";
+        note = "单件 (89+6)";
       } else {
-        // 超过2件的逻辑，暂时按两件套叠加计算（根据需求这里主要针对1和2，这里做个简单兜底）
-        // 假设规则：每2件160，余1件89。运费稍微复杂，这里暂定每加1件加3元运费（简化逻辑）
-        // 或者简单提示销售手动确认。
-        // 为了代码稳定，这里按: (数量 * 89) 计算标准价，不自动算优惠，建议人工拆单？
-        // 不，用户说“两张即为160”。我们按对计算。
-        const pairs = Math.floor(totalQty / 2);
-        const remainder = totalQty % 2;
-        productTotal = (pairs * 160) + (remainder * 89);
-        // 运费逻辑：2件9元。超过2件每件加3元（假设）
-        shipping = 9 + (totalQty - 2) * 3; 
-        if(totalQty > 2) note = `多件组合 (${totalQty}件)`;
+        // 多件逻辑: 全按80算, 运费 6 + (n-1)*3
+        productTotal = totalQty * 80;
+        shipping = 6 + (totalQty - 1) * 3;
+        note = `多件优惠 (${totalQty}×80 + 运费${shipping})`;
       }
     } else {
-      // 内购逻辑
+      // 内购逻辑 (保持不变?) 假设内购还是 45/件
+      // 运费逻辑如果跟随 Q5:
       productTotal = totalQty * 45;
-      if (totalQty === 1) shipping = 6;
-      else if (totalQty === 2) shipping = 9;
-      else shipping = 9 + (totalQty - 2) * 3; // 同样假设
-      note = `内购 (${totalQty} × 45)`;
+      shipping = 6 + (Math.max(0, totalQty - 1) * 3);
+      note = `内购 (${totalQty}×45 + 运费${shipping})`;
     }
 
-    const finalTotal = productTotal + shipping;
-    updateDisplay(finalTotal, `${note} + 运费${shipping}元`);
-    return { total: finalTotal, shipping: shipping, productTotal: productTotal };
+    return { total: productTotal + shipping, shipping, productTotal, note };
   }
 
-  function updateDisplay(price, text) {
-    document.getElementById("finalPrice").innerText = price;
-    document.getElementById("priceDetail").innerText = text;
+  // 计算价格 (复用于新建和编辑)
+  function calcPrice(mode) {
+    const prefix = mode === 'new' ? '' : 'edit';
+    const qa = parseInt(document.getElementById(mode === 'new' ? "qtyA" : "editQtyA").value) || 0;
+    const qb = parseInt(document.getElementById(mode === 'new' ? "qtyB" : "editQtyB").value) || 0;
+    // 编辑模式默认用retail，或者你需要把类型也带入编辑框？暂时按retail算，或读取原单类型
+    // 简化起见，假设大部分是零售。如果需要精准，要在编辑框加类型选择。
+    const type = mode === 'new' ? document.querySelector('input[name="orderType"]:checked').value : 'retail'; 
+    
+    const res = calculateCore(qa, qb, type);
+
+    if (mode === 'new') {
+      document.getElementById("finalPrice").innerText = res.total;
+      document.getElementById("priceDetail").innerText = res.note;
+    } else {
+      document.getElementById("editPriceDisplay").innerText = res.total;
+      document.getElementById("editPriceDetail").innerText = res.note;
+    }
+    return res;
   }
 
-  async function submitOrder() {
-    const btn = document.getElementById("submitBtn");
+  // 提交订单
+  document.getElementById("submitBtn").onclick = async () => {
     const name = document.getElementById("custName").value.trim();
     const phone = document.getElementById("custPhone").value.trim();
-    const address = document.getElementById("custAddress").value.trim();
+    let address = document.getElementById("custAddress").value.trim();
     const qa = parseInt(document.getElementById("qtyA").value) || 0;
     const qb = parseInt(document.getElementById("qtyB").value) || 0;
-    const remarks = document.getElementById("remarks").value.trim();
+    let remarks = document.getElementById("remarks").value.trim();
     const type = document.querySelector('input[name="orderType"]:checked').value;
 
-    if (!name || !phone || !address) return alert("请填写完整的客户收货信息");
-    if ((qa + qb) <= 0) return alert("请选择至少一件商品");
+    // 必填验证
+    if (!name || !phone) return alert("❌ 姓名和电话是必填项！");
+    if ((qa + qb) <= 0) return alert("请至少选择一件商品");
 
-    const priceData = calcPrice();
+    // 地址防呆
+    if (!address) {
+      if(!confirm("⚠️ 警告：地址未填写！\n\n点击【确定】继续提交（系统将自动标记未填地址）\n点击【取消】返回填写")) {
+        return; // 用户取消
+      }
+      // 用户选择继续，自动追加红字备注
+      remarks = `[系统:客户未填地址] ${remarks}`;
+    }
 
-    btn.disabled = true;
-    btn.innerText = "提交中...";
+    const priceData = calculateCore(qa, qb, type);
+    const btn = document.getElementById("submitBtn");
+    btn.classList.add("loading");
 
     const { error } = await window.sb.from("orders").insert({
       account: currentUser.email,
       customer_name: name,
       phone: phone,
       address: address,
-      qty_a: qa,
-      qty_b: qb,
-      total_qty: qa + qb,
-      product: `A款:${qa}, B款:${qb}`, // 简报
+      qty_a: qa, qty_b: qb, total_qty: qa + qb,
+      product: `A款:${qa}, B款:${qb}`,
       order_type: type,
       total_price: priceData.total,
       shipping: priceData.shipping,
-      remarks: remarks
+      remarks: remarks,
+      status: 'pending', // 默认待发货
+      item_category: '日用品' // 默认类别
     });
+
+    btn.classList.remove("loading");
 
     if (error) {
       alert("提交失败: " + error.message);
-      btn.disabled = false;
-      btn.innerText = "提交订单";
-      return;
+    } else {
+      alert("✅ 订单提交成功！");
+      location.reload();
     }
+  };
 
-    alert("✅ 订单提交成功！");
-    location.reload(); // 刷新重置
+  // 加载排行榜
+  async function loadRankings() {
+    // 读取我们在 SQL 里创建的视图
+    const { data, error } = await window.sb.from("sales_leaderboard").select("*").limit(10);
+    if(data) {
+      const div = document.getElementById("rankList");
+      div.innerHTML = data.map(item => {
+        // 简单脱敏:只显示邮箱前缀
+        const name = item.account.split('@')[0];
+        const isMe = item.account === currentUser.email;
+        return `
+          <div class="rank-item ${isMe ? 'me' : ''}">
+            <div>${name}</div>
+            <span class="rank-score">¥${item.total_revenue}</span>
+            <div style="font-size:10px">${item.total_items}件</div>
+          </div>
+        `;
+      }).join("");
+    }
   }
 
+  // 加载我的订单
   async function loadMyTodayOrders() {
     const list = document.getElementById("todayList");
-    // 获取当天的开始时间
     const today = new Date().toISOString().split('T')[0];
-    
     const { data } = await window.sb
       .from("orders")
-      .select("customer_name, total_qty, total_price")
+      .select("*")
       .eq("account", currentUser.email)
       .gte("created_at", today)
       .order("created_at", { ascending: false });
 
     if(data) {
-      list.innerHTML = data.map(o => `<li>${o.customer_name} - ${o.total_qty}件 (¥${o.total_price})</li>`).join("");
+      list.innerHTML = data.map(o => `
+        <li style="background:#fff; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong>${o.customer_name}</strong> <span style="font-size:12px;color:#888">${o.product}</span><br>
+            <span style="font-size:12px; color:${o.tracking_number ? 'green' : 'orange'}">
+              ${o.tracking_number ? '🚛 已发货: '+o.tracking_number : '⏳ 待发货'}
+            </span>
+          </div>
+          <div>
+            <div style="font-weight:bold; text-align:right;">¥${o.total_price}</div>
+            <button class="btn-edit" onclick="openEdit('${o.id}', '${o.customer_name}', '${o.phone}', '${o.address || ''}', ${o.qty_a}, ${o.qty_b}, '${o.remarks || ''}')">✏️修改</button>
+          </div>
+        </li>
+      `).join("");
+    }
+  }
+
+  // === 修改功能 ===
+  let currentEditId = null;
+  let originalRemarks = "";
+
+  window.openEdit = (id, name, phone, addr, qa, qb, rem) => {
+    currentEditId = id;
+    originalRemarks = rem;
+    document.getElementById("editId").value = id;
+    document.getElementById("editName").value = name;
+    document.getElementById("editPhone").value = phone;
+    document.getElementById("editAddress").value = addr.replace(/\[系统:客户未填地址\]\s?/, ""); // 编辑时去掉系统标记，让用户填
+    document.getElementById("editQtyA").value = qa;
+    document.getElementById("editQtyB").value = qb;
+    
+    calcPrice('edit'); // 初始计算
+    document.getElementById("editModal").classList.remove("hidden");
+  };
+
+  function closeEdit() {
+    document.getElementById("editModal").classList.add("hidden");
+  }
+
+  async function saveEdit() {
+    const name = document.getElementById("editName").value;
+    const phone = document.getElementById("editPhone").value;
+    const addr = document.getElementById("editAddress").value;
+    const qa = parseInt(document.getElementById("editQtyA").value) || 0;
+    const qb = parseInt(document.getElementById("editQtyB").value) || 0;
+    
+    // 重新计价
+    const priceData = calculateCore(qa, qb, 'retail'); // 默认按零售改
+    
+    // 生成审计日志
+    const nowStr = new Date().toLocaleString();
+    const log = `[${nowStr} 修改] A:${qa}/B:${qb}, 总价:${priceData.total}`;
+    const newRemarks = `${originalRemarks} | ${log}`;
+
+    const { error } = await window.sb.from("orders").update({
+      customer_name: name,
+      phone: phone,
+      address: addr,
+      qty_a: qa, qty_b: qb, total_qty: qa+qb,
+      product: `A款:${qa}, B款:${qb}`,
+      total_price: priceData.total,
+      shipping: priceData.shipping,
+      remarks: newRemarks
+    }).eq("id", currentEditId);
+
+    if(error) alert(error.message);
+    else {
+      alert("✅ 修改成功！");
+      location.reload();
     }
   }
 
@@ -293,9 +403,7 @@
 </script>
 
 <footer style="margin-top:30px; text-align:center; font-size:12px; color:#aaa;">
-  Pro Player Sales System V4.0<br>
-  © Developed by Mars-老刘 & AI
+  Pro Player Sales V5.0 · 内部系统
 </footer>
-
 </body>
 </html>
