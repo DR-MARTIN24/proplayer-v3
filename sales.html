@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售 V9.0</title>
+  <title>Pro Player · 销售 V9.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
@@ -14,9 +14,13 @@
   </script>
 
   <style>
-    /* 10. 统一字体 */
     body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Roboto, sans-serif; padding: 15px; max-width: 500px; margin: auto; background: #f2f2f7; color: #1c1c1e; padding-bottom: 60px; }
-    h2 { margin: 0 0 15px 0; font-weight: 800; text-align: center; color: #333; letter-spacing: -0.5px; }
+    
+    /* 5. 标题与LOGO */
+    .brand-header { text-align: center; margin-bottom: 20px; }
+    .brand-logo { width: 60px; height: 60px; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { margin: 0; font-weight: 800; color: #333; letter-spacing: -0.5px; font-size: 22px; }
+    .version-tag { font-size: 12px; color: #999; font-weight: 400; margin-left: 5px; vertical-align: middle; }
     
     .card { background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); margin-bottom: 16px; }
     
@@ -27,7 +31,6 @@
     
     .qty-control { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
     .qty-title { font-weight: 600; font-size: 16px; }
-    /* iOS 风格选择器 */
     .qty-select { width: 100px; text-align: center; font-weight: bold; background: #f2f2f7; border: none; padding: 10px; border-radius: 8px; color: #007aff; font-size: 18px; }
 
     .type-selector { display: flex; background: #e5e5ea; padding: 4px; border-radius: 10px; margin-bottom: 20px; margin-top: 15px; }
@@ -52,15 +55,18 @@
     .today-item { padding: 15px 0; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; }
     .tracking-link { color: #34c759; text-decoration: none; font-weight: bold; font-size: 13px; }
     
-    /* 15. 底部版权与时钟 */
-    footer { text-align: center; font-size: 12px; color: #999; margin-top: 30px; padding-bottom: 20px; }
-    .live-clock { display: block; font-size: 11px; color: #ccc; margin-top: 5px; font-family: monospace; }
+    /* 4. 版权与时钟 */
+    footer { text-align: center; font-size: 11px; color: #aaa; margin-top: 30px; padding-bottom: 20px; line-height: 1.6; }
+    .live-clock { display: block; font-size: 11px; color: #ccc; margin-top: 2px; font-family: monospace; }
   </style>
 </head>
 
 <body>
 
-<h2>🚀 Pro Player 销售 V9.0</h2>
+<div class="brand-header">
+  <img src="https://img.icons8.com/color/96/mouse-pad.png" class="brand-logo" alt="Logo">
+  <h2>Pro Player 鼠标垫销售统计系统<span class="version-tag">V9.1</span></h2>
+</div>
 
 <div id="loginBox" class="card">
   <h3 style="margin-top:0">员工登录</h3>
@@ -131,7 +137,8 @@
   <button onclick="logout()" style="background:transparent; color:#999; border:none; width:100%; padding:15px; font-size:14px; font-weight:600;">安全退出</button>
   
   <footer>
-    Pro Player System V9.0 &copy; 2026
+    Pro Player System V9.1<br>
+    制作人：Mars-老刘 & AI
     <span id="clock" class="live-clock"></span>
   </footer>
 </div>
@@ -153,7 +160,6 @@
 <script>
   let currentUser = null; const MY_ADMIN_EMAIL = "169351@qq.com";
   
-  // 启动
   window.onload = async() => {
     setInterval(() => document.getElementById('clock').innerText = new Date().toLocaleTimeString(), 1000);
     if(window.sb) {
@@ -181,7 +187,6 @@
     }
   }
 
-  // 8. 数量选择逻辑 (下拉 -> 输入框)
   function checkQtyInput(type) {
     const sel = document.getElementById('sel'+type);
     if(sel.value === 'more') {
@@ -217,7 +222,6 @@
     document.getElementById("priceDetail").innerText=r.n;
   }
 
-  // 提交订单 (防连点)
   document.getElementById("submitBtn").onclick = async () => {
     const btn = document.getElementById("submitBtn");
     const n=document.getElementById("custName").value.trim();
@@ -246,7 +250,6 @@
     else { alert("✅ 提交成功！"); location.reload(); }
   };
 
-  // OCR
   function openOcrModal(){document.getElementById('ocrModal').classList.remove('hidden');}
   async function processSmartInput() {
     const btn = document.querySelector("#ocrModal button:last-child");
