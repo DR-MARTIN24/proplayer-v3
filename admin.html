@@ -2,54 +2,50 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V7.9 (无门槛直通版)</title>
+  <title>Pro Player · 总控台 V7.9</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
-    // ✅ Key 绝对正确
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
-    
-    // 初始化
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 
   <style>
-    body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f7fa; }
+    body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
     h2 { border-bottom: 2px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
     
-    /* 顶部统计卡 */
     .stats-box { display: flex; gap: 15px; margin-bottom: 20px; }
     .card { background: #fff; padding: 15px; border-radius: 8px; flex: 1; border-left: 4px solid #007aff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .num { font-size: 24px; font-weight: bold; margin-top: 5px; }
 
-    /* 占比条 */
     .bar-box { background: #fff; padding: 10px; margin-bottom: 20px; border-radius: 8px; }
     .bar-track { display: flex; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; margin-top: 5px; }
     .bar-part { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; transition: width 0.3s; }
 
-    /* 按钮组 */
     .btn-group { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-    button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; }
+    button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; }
     .btn-blue { background: #007aff; }
     .btn-green { background: #34c759; }
     .btn-orange { background: #ff9500; }
     .btn-red { background: #ff3b30; }
     .btn-gray { background: #eee; color: #333; }
 
-    /* 表格 */
-    .table-container { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .table-container { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 200px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
     th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
     th { background: #fafafa; white-space: nowrap; }
     
-    /* 弹窗 */
+    /* 弹窗样式 */
     .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 1000; }
     .modal.show { display: flex; }
     .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    
+    /* 数据透视区 */
+    #rawDataArea { background: #333; color: #0f0; padding: 10px; margin-top: 50px; border-radius: 8px; font-family: monospace; font-size: 11px; white-space: pre-wrap; display: none; }
   </style>
 </head>
 
@@ -57,7 +53,7 @@
 
 <h2>
   <span>Pro Player 总控台 V7.9</span>
-  <button class="btn-gray" onclick="window.location.href='sales.html'">返回销售端</button>
+  <button class="btn-gray" onclick="location.href='sales.html'">返回销售端</button>
 </h2>
 
 <div class="stats-box">
@@ -77,14 +73,16 @@
 </div>
 
 <div class="btn-group">
-  <button class="btn-blue" onclick="exportCainiao()">📤 导出菜鸟</button>
-  <button class="btn-green" onclick="exportFinance()">💰 导出财务</button>
+  <button class="btn-blue" onclick="exportCainiao()">📤 导出菜鸟 (高级版)</button>
+  <button class="btn-green" onclick="exportFinance()">💰 导出财务 (中文)</button>
   <button class="btn-orange" onclick="showGift()">🎁 录入赠送</button>
   <button class="btn-red" onclick="delSel()">🗑 删除选中</button>
-  <button class="btn-gray" onclick="window.location.reload()">🔄 强制刷新</button>
+  <button class="btn-gray" onclick="loadData()">🔄 刷新</button>
   
   <input type="file" id="fileIn" accept=".xlsx" style="display:none" onchange="doImport(this)">
   <button class="btn-gray" style="margin-left:auto" onclick="document.getElementById('fileIn').click()">📥 导入回执</button>
+  
+  <button class="btn-gray" onclick="toggleRawData()">🔍 检查数据</button>
 </div>
 
 <div id="statusMsg" style="text-align:center; padding:20px; color:#888;">正在读取数据库...</div>
@@ -100,6 +98,8 @@
     <tbody id="tbody"></tbody>
   </table>
 </div>
+
+<div id="rawDataArea">点击上方“检查数据”查看原始返回内容...</div>
 
 <div id="giftModal" class="modal">
   <div class="modal-box">
@@ -123,110 +123,175 @@
 <script>
   let allData = [];
 
-  // 1. 无门槛启动 (移除了所有登录检查)
-  window.onload = async () => {
-    fetchData();
-  };
+  window.onload = () => { loadData(); };
 
-  // 2. 核心读取
-  async function fetchData() {
-    document.getElementById("statusMsg").innerText = "正在连接 Supabase...";
-    
-    // 简单粗暴读取
+  async function loadData() {
+    document.getElementById("statusMsg").innerText = "正在读取...";
+    // 1. 获取数据 (不加筛选，全部拉取)
     const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
-
-    if (error) {
-      document.getElementById("statusMsg").innerHTML = `<b style="color:red">读取失败: ${error.message}</b><br>请检查 SQL Editor 里的 RLS 设置`;
+    
+    if(error) {
+      document.getElementById("statusMsg").innerHTML = `<span style="color:red">读取失败: ${error.message}</span>`;
+      document.getElementById("rawDataArea").innerText = "Error: " + error.message;
       return;
     }
+    
+    allData = data || [];
+    
+    // 2. 显示原始数据 (用于调试)
+    const debugInfo = `✅ Loaded ${allData.length} rows.\nFirst row keys: ${allData.length > 0 ? Object.keys(allData[0]).join(", ") : "None"}\nFirst row data: ${allData.length > 0 ? JSON.stringify(allData[0], null, 2) : "None"}`;
+    document.getElementById("rawDataArea").innerText = debugInfo;
 
-    if (!data || data.length === 0) {
-      document.getElementById("statusMsg").innerText = "✅ 连接成功，但没有订单数据 (0条)";
-      return;
+    // 3. 渲染
+    if(allData.length === 0) {
+      document.getElementById("statusMsg").innerText = "暂无数据";
+    } else {
+      document.getElementById("statusMsg").style.display = "none";
+      document.getElementById("mainTable").style.display = "table";
+      renderTable();
+      calcStats();
     }
-
-    allData = data;
-    document.getElementById("statusMsg").style.display = "none";
-    document.getElementById("mainTable").style.display = "table";
-    render();
-    stats();
   }
 
-  // 3. 渲染
-  function render() {
+  function renderTable() {
     const box = document.getElementById("tbody");
     box.innerHTML = "";
+    
     allData.forEach(r => {
+      // 强力容错渲染：确保字段名完全匹配
       try {
         const tr = document.createElement("tr");
-        const isShip = !!r.tracking_number;
-        const st = isShip ? `<span style="color:green;font-weight:bold">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank">${r.tracking_number}</a></span>` : `<span style="color:orange">待发货</span>`;
         
-        let rem = r.remarks || "";
-        if (rem.includes("内购") || rem.includes("赠送")) rem = `<b style="color:green">${rem}</b>`;
-        
-        // 容错处理：如果字段是 null，给个默认值 0
-        const qa = r.qty_a || 0; 
+        // 字段映射 (防止 null)
+        const id = (r.id || "").substr(0,8);
+        const time = r.created_at ? new Date(r.created_at).toLocaleString() : "-";
+        const acc = (r.account || "").split("@")[0];
+        const name = r.customer_name || "未知";
+        const phone = r.phone || "";
+        const qa = r.qty_a || 0;
         const qb = r.qty_b || 0;
-        const tq = (r.total_qty !== undefined && r.total_qty !== null) ? r.total_qty : (qa+qb);
-        const tp = (r.total_price !== undefined && r.total_price !== null) ? r.total_price : 0;
+        const total = (r.total_qty !== undefined) ? r.total_qty : (qa+qb);
+        const price = r.total_price || 0;
+        const rem = r.remarks || "";
+        
+        // 状态与备注样式
+        const isShip = !!r.tracking_number;
+        const statusHtml = isShip 
+          ? `<span style="color:green;font-weight:bold">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank" style="color:green">${r.tracking_number}</a></span>` 
+          : `<span style="color:orange">待发货</span>`;
+        
+        let remHtml = rem;
+        if(rem.includes("内购") || rem.includes("赠送")) remHtml = `<span style="color:green;font-weight:bold">${rem}</span>`;
 
         tr.innerHTML = `
           <td><input type="checkbox" class="chk" value="${r.id}"></td>
-          <td>${(r.id||"").substr(0,8)}</td>
-          <td>${new Date(r.created_at).toLocaleString()}</td>
-          <td>${(r.account||"").split("@")[0]}</td>
-          <td><b>${r.customer_name}</b><br>${r.phone}</td>
+          <td>${id}</td>
+          <td>${time}</td>
+          <td>${acc}</td>
+          <td><b>${name}</b><br>${phone}</td>
           <td>ProPlayer鼠标垫</td>
           <td>A:${qa} / B:${qb}</td>
-          <td><b>${tq}</b></td>
-          <td>${tp}</td>
-          <td>${st}</td>
-          <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${rem}">${rem}</td>
+          <td><b>${total}</b></td>
+          <td>${price}</td>
+          <td>${statusHtml}</td>
+          <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${rem}">${remHtml}</td>
         `;
         box.appendChild(tr);
-      } catch (err) {
-        console.error("渲染某行失败", err);
+      } catch (e) {
+        console.error("Render error:", e);
       }
     });
   }
 
-  // 4. 统计
-  function stats() {
+  function calcStats() {
     const today = new Date().toISOString().split("T")[0];
-    let tNum=0, tMoney=0, pending=0, sa=0, sb=0;
-    
+    let n=0, m=0, p=0, sa=0, sb=0;
     allData.forEach(r => {
-      // 容错
-      const price = r.total_price || 0;
-      const qa = r.qty_a || 0;
-      const qb = r.qty_b || 0;
-
-      if (r.created_at && r.created_at.includes(today)) { tNum++; tMoney += price; }
-      if (!r.tracking_number) pending++;
-      sa += qa;
-      sb += qb;
+      if(r.created_at && r.created_at.includes(today)) { n++; m+=(r.total_price||0); }
+      if(!r.tracking_number) p++;
+      sa += (r.qty_a||0); sb += (r.qty_b||0);
     });
-
-    document.getElementById("vOrder").innerText = tNum;
-    document.getElementById("vMoney").innerText = "¥" + tMoney;
-    document.getElementById("vPending").innerText = pending;
-
-    const total = sa + sb;
-    if(total > 0) {
-      const pa = Math.round(sa/total*100);
-      const pb = 100 - pa;
-      document.getElementById("barA").style.width = pa+"%"; document.getElementById("barA").innerText = `A: ${pa}% (${sa})`;
-      document.getElementById("barB").style.width = pb+"%"; document.getElementById("barB").innerText = `B: ${pb}% (${sb})`;
-    } else {
-       document.getElementById("barA").style.width = "50%"; document.getElementById("barA").innerText = "A: 0";
-       document.getElementById("barB").style.width = "50%"; document.getElementById("barB").innerText = "B: 0";
+    document.getElementById("vOrder").innerText = n;
+    document.getElementById("vMoney").innerText = "¥"+m;
+    document.getElementById("vPending").innerText = p;
+    
+    const t = sa+sb;
+    if(t>0) {
+      const pa = Math.round(sa/t*100);
+      document.getElementById("barA").style.width = pa+"%"; document.getElementById("barA").innerText = `A:${pa}% (${sa})`;
+      document.getElementById("barB").style.width = (100-pa)+"%"; document.getElementById("barB").innerText = `B:${100-pa}% (${sb})`;
     }
   }
 
-  // 5. 交互功能
+  // === 恢复 V7.4 的完美 Excel 导出 (样式+回填列) ===
+  function exportCainiao() {
+    if(!allData.length) return alert("无数据");
+    
+    // 1. 表头
+    const headers = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
+    
+    // 2. 数据构建
+    const data = [
+      ["","收件信息","","","物品信息","","","备注","","回填区"], // 辅助行
+      headers
+    ];
+    
+    allData.forEach(r => {
+      let desc = "ProPlayer鼠标垫";
+      if(r.qty_a) desc += ` (A款粗*${r.qty_a})`;
+      if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
+      
+      data.push([
+        r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""
+      ]);
+    });
+
+    // 3. 样式处理
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    // 列宽
+    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
+    
+    // 遍历单元格加样式
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for(let R=0; R<=range.e.r; ++R) {
+      for(let C=0; C<=range.e.c; ++C) {
+        const addr = XLSX.utils.encode_cell({r:R, c:C});
+        if(!ws[addr]) continue;
+        
+        // 基础边框
+        ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
+        
+        // 表头颜色 (前两行)
+        if(R < 2) {
+          ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; // 浅绿
+          ws[addr].s.font = { bold: true };
+        }
+        
+        // 备注列 (G列 index 7) 红色
+        if(R >= 2 && C === 7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
+        
+        // 回填列 (J列 index 9) 黄色
+        if(R >= 2 && C === 9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+
+  function exportFinance() {
+    // 简单的财务导出
+    const body = [["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
+    allData.forEach(r => body.push([r.created_at, r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number||"未发货", r.remarks, r.tracking_number]));
+    const ws = XLSX.utils.aoa_to_sheet(body);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务");
+    XLSX.writeFile(wb, `财务_${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+
+  // 交互逻辑
   function showGift() { document.getElementById("giftModal").classList.add("show"); }
-  
   async function submitGift() {
     const type = document.getElementById("gt").value;
     const name = document.getElementById("gn").value;
@@ -242,68 +307,27 @@
     });
     
     if(error) alert(error.message);
-    else { alert("✅ 录入成功"); document.getElementById("giftModal").classList.remove("show"); fetchData(); }
+    else { alert("✅ 录入成功"); document.getElementById("giftModal").classList.remove("show"); loadData(); }
   }
 
   function checkAll(el) { document.querySelectorAll(".chk").forEach(c => c.checked = el.checked); }
-  
   async function delSel() {
     const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
     if(!ids.length) return alert("没选怎么删？");
     if(confirm(`确定删除这 ${ids.length} 条？`)) {
       await window.sb.from("orders").delete().in("id", ids);
-      fetchData();
+      loadData();
     }
   }
-
-  // 导出 (菜鸟 + 财务)
-  function exportCainiao() {
-    if(!allData.length) return;
-    const head = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
-    const body = [["","收件信息","","","物品信息","","","备注","","回填区"], head];
-    allData.forEach(r => {
-      let d = "ProPlayer鼠标垫";
-      const qa = r.qty_a || 0; const qb = r.qty_b || 0;
-      if(qa) d += ` (A款粗*${qa})`; if(qb) d += ` (B款细*${qb})`;
-      body.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, d, r.remarks, "", ""]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(body);
-    // 样式略
-    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:20}];
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, "菜鸟发货单.xlsx");
+  
+  function toggleRawData() {
+    const el = document.getElementById("rawDataArea");
+    el.style.display = el.style.display === "block" ? "none" : "block";
   }
-
-  function exportFinance() {
-    const body = [["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
-    allData.forEach(r => body.push([r.created_at, r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number||"未发货", r.remarks, r.tracking_number]));
-    const ws = XLSX.utils.aoa_to_sheet(body);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务");
-    XLSX.writeFile(wb, "财务单.xlsx");
-  }
-
+  
   async function doImport(el) {
     const f = el.files[0]; if(!f) return;
     const r = new FileReader();
     r.onload = async (e) => {
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {range:1});
-      let n = 0;
-      for(let row of rows) {
-        let oid, track;
-        for(let k in row) {
-          if(k.includes("编号")) oid = row[k];
-          if(k.includes("回填") || k.includes("运单")) track = row[k];
-        }
-        if(oid && track) {
-          const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid);
-          if(!error) n++;
-        }
-      }
-      alert(`✅ 更新 ${n} 条`); el.value=""; fetchData();
-    };
-    r.readAsArrayBuffer(f);
-  }
-</script>
-</body>
-</html>
+      const
