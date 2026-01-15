@@ -5,9 +5,22 @@
   <title>Pro Player · 销售系统</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Supabase SDK（必须在 config.js 之前加载） -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js"></script>
+
+  <script>
+    // 配置信息
+    const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T";
+
+    // 检查 SDK 是否加载
+    if (typeof supabase === 'undefined') {
+      alert("错误：Supabase SDK 加载失败，请检查网络连接");
+    } else {
+      // 初始化客户端并挂载到 window.sb
+      window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log("[Supabase] 客户端初始化成功");
+    }
+  </script>
 
   <style>
     body {
@@ -15,27 +28,56 @@
       padding: 20px;
       max-width: 480px;
       margin: auto;
+      background-color: #f9f9f9;
     }
     h2, h3 {
       margin-bottom: 10px;
+      color: #333;
+    }
+    /* 登录框样式优化 */
+    #loginBox, #appBox {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     input, button {
       width: 100%;
-      padding: 10px;
-      margin: 6px 0;
+      padding: 12px;
+      margin: 8px 0;
       font-size: 16px;
+      box-sizing: border-box; /* 防止边框撑大宽度 */
+      border-radius: 4px;
+      border: 1px solid #ddd;
     }
     button {
       background: #000;
       color: #fff;
       border: none;
       cursor: pointer;
+      font-weight: bold;
+    }
+    button:active {
+      background: #333;
     }
     .hidden {
-      display: none;
+      display: none !important;
     }
     ul {
-      padding-left: 18px;
+      padding-left: 0;
+      list-style: none;
+    }
+    li {
+      background: #f1f1f1;
+      margin-bottom: 5px;
+      padding: 10px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .date-tag {
+      font-size: 12px;
+      color: #888;
     }
   </style>
 </head>
@@ -44,44 +86,54 @@
 
 <h2>Pro Player 销售系统</h2>
 
-<!-- 登录区域 -->
 <div id="loginBox">
   <h3>账号登录</h3>
-  <input id="email" type="email" placeholder="邮箱" />
-  <input id="password" type="password" placeholder="密码" />
+  <input id="email" type="email" placeholder="输入邮箱" />
+  <input id="password" type="password" placeholder="输入密码" />
   <button id="loginBtn">登录</button>
-  <p id="loginMsg" style="color:red;"></p>
+  <p id="loginMsg" style="color:red; font-size: 14px; margin-top: 5px;"></p>
 </div>
 
-<!-- 主系统区域 -->
 <div id="appBox" class="hidden">
   <h3>新建订单</h3>
-  <input id="product" placeholder="产品名称" />
+  <input id="product" placeholder="产品名称 (例如: 王者荣耀皮肤)" />
   <input id="qty" type="number" placeholder="数量" />
   <button id="submitBtn">提交订单</button>
 
-  <h3>我的订单</h3>
-  <ul id="orderList"></ul>
+  <h3 style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">我的订单记录</h3>
+  <ul id="orderList">
+    </ul>
 
-  <button id="logoutBtn">退出登录</button>
+  <button id="logoutBtn" style="background:#666; margin-top:20px;">退出登录</button>
 </div>
 
 <script>
-  // 页面元素
+  // === 逻辑代码 ===
+  
   const loginBox = document.getElementById("loginBox");
   const appBox = document.getElementById("appBox");
   const loginMsg = document.getElementById("loginMsg");
 
+  // 绑定事件
   document.getElementById("loginBtn").onclick = login;
   document.getElementById("submitBtn").onclick = submitOrder;
   document.getElementById("logoutBtn").onclick = logout;
 
   let currentUser = null;
 
-  // 登录
-  async function login() {
-    loginMsg.innerText = "";
+  // 自动检查是否已登录 (页面刷新保持登录状态)
+  (async function checkSession() {
+    if(!window.sb) return;
+    const { data: { session } } = await window.sb.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      showApp();
+    }
+  })();
 
+  // 登录函数
+  async function login() {
+    loginMsg.innerText = "登录中...";
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
 
@@ -90,70 +142,101 @@
       return;
     }
 
-    // 使用 window.sb（避免 supabase 命名冲突）
+    // 登录调用
     const { data, error } = await window.sb.auth.signInWithPassword({
       email,
       password
     });
 
     if (error) {
-      loginMsg.innerText = error.message;
+      loginMsg.innerText = "登录失败: " + error.message;
       return;
     }
 
     currentUser = data.user;
+    loginMsg.innerText = "";
+    showApp();
+  }
+
+  // 切换到主界面
+  function showApp() {
     loginBox.classList.add("hidden");
     appBox.classList.remove("hidden");
-
-    loadOrders();
+    loadOrders(); // 登录成功后立即加载订单
   }
 
   // 加载订单
   async function loadOrders() {
     const list = document.getElementById("orderList");
-    list.innerHTML = "";
+    list.innerHTML = "<p style='color:#666;font-size:12px;'>加载中...</p>";
 
+    // 查询数据库
     const { data, error } = await window.sb
       .from("orders")
       .select("*")
+      .eq("account", currentUser.email) // 只看自己的订单
       .order("created_at", { ascending: false });
 
+    list.innerHTML = ""; // 清空加载提示
+
     if (error) {
-      console.error(error);
+      list.innerHTML = `<p style="color:red">加载失败: ${error.message}</p>`;
+      return;
+    }
+
+    if (data.length === 0) {
+      list.innerHTML = `<p style="color:#999">暂无订单</p>`;
       return;
     }
 
     data.forEach(row => {
       const li = document.createElement("li");
-      li.innerText = `${row.product} × ${row.qty}`;
+      // 格式化时间
+      const date = new Date(row.created_at).toLocaleDateString();
+      li.innerHTML = `
+        <span>${row.product} <b style="margin-left:5px">×${row.qty}</b></span>
+        <span class="date-tag">${date}</span>
+      `;
       list.appendChild(li);
     });
   }
 
   // 提交订单
   async function submitOrder() {
-    const product = document.getElementById("product").value.trim();
-    const qty = document.getElementById("qty").value;
+    const btn = document.getElementById("submitBtn");
+    const productInput = document.getElementById("product");
+    const qtyInput = document.getElementById("qty");
+    
+    const product = productInput.value.trim();
+    const qty = qtyInput.value;
 
     if (!product || !qty) {
       alert("请填写完整订单信息");
       return;
     }
 
+    btn.disabled = true;
+    btn.innerText = "提交中...";
+
+    // 插入数据
     const { error } = await window.sb.from("orders").insert({
       product: product,
       qty: qty,
-      account: currentUser.email
+      account: currentUser.email // 记录是谁卖的
     });
 
+    btn.disabled = false;
+    btn.innerText = "提交订单";
+
     if (error) {
-      alert(error.message);
+      alert("提交失败: " + error.message);
       return;
     }
 
-    document.getElementById("product").value = "";
-    document.getElementById("qty").value = "";
-
+    // 清空输入框并刷新列表
+    productInput.value = "";
+    qtyInput.value = "";
+    alert("订单提交成功！");
     loadOrders();
   }
 
@@ -164,10 +247,9 @@
   }
 </script>
 
-<footer style="margin-top:40px;font-size:12px;color:#666;">
+<footer style="margin-top:40px;text-align:center;font-size:12px;color:#999;">
   © Pro Player 销售系统<br>
-  Developed by Mars-老刘 & AI<br>
-  Version build: 2026-01-16
+  Version build: 2026-01-16 (Fixed)
 </footer>
 
 </body>
