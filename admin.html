@@ -2,15 +2,17 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 管理后台 V4.0</title>
+  <title>Pro Player · 管理后台 V4.1</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
+    // === Pro Player 系统配置 ===
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T";
+
     if (typeof supabase !== 'undefined') {
       window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
@@ -31,7 +33,8 @@
     th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
     th { background: #f8f9fa; font-weight: 600; color: #555; }
     
-    .remark-cell { color: #d70015; font-weight: 500; } /* 网页端备注红色显示 */
+    /* 红色备注 */
+    .remark-cell { color: #d70015; font-weight: 500; }
     
     .btn-group { margin-bottom: 15px; display: flex; gap: 10px; }
     button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
@@ -40,7 +43,6 @@
     .btn-danger { background: #ff3b30; color: white; }
     button:hover { opacity: 0.9; }
 
-    /* 加载动画 */
     .loader { text-align: center; padding: 20px; color: #999; }
   </style>
 </head>
@@ -48,7 +50,7 @@
 <body>
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-  <h2 style="margin:0;">Pro Player 管理控制台 V4.0</h2>
+  <h2 style="margin:0;">Pro Player 管理控制台 V4.1</h2>
   <button class="btn-danger" onclick="logout()">退出系统</button>
 </div>
 
@@ -96,14 +98,32 @@
 <script>
   let allOrders = [];
 
-  // 初始化
+  // ==========================================
+  // ⚠️⚠️⚠️ 请在这里修改你的管理员邮箱 ⚠️⚠️⚠️
+  // 把下面的 '你的邮箱@example.com' 换成你真实的邮箱
+  const MY_ADMIN_EMAIL = "169351@qq.com"; 
+  // ==========================================
+
+  // 初始化检查
   (async () => {
+    // 1. 检查是否登录
     const { data: { user } } = await window.sb.auth.getUser();
+    
     if (!user) {
-      alert("请先登录管理员账号");
-      location.href = "sales.html";
+      alert("请先在销售页面 (sales.html) 登录账号");
+      location.href = "sales.html"; // 跳回登录页
       return;
     }
+
+    // 2. 检查是不是管理员
+    // 注意：这里用到了 toLowerCase() 是防止大小写不一样导致判断错误
+    if (user.email.toLowerCase() !== MY_ADMIN_EMAIL.toLowerCase()) {
+      alert("⚠️ 权限不足！\n\n该账号仅限销售使用，无权访问管理后台。");
+      location.href = "sales.html"; // 踢回销售页
+      return;
+    }
+
+    // 3. 身份验证通过，加载数据
     loadData();
   })();
 
@@ -111,7 +131,6 @@
     document.getElementById("loader").style.display = "block";
     document.getElementById("dataTable").style.display = "none";
 
-    // 获取所有订单，按时间倒序
     const { data, error } = await window.sb
       .from("orders")
       .select("*")
@@ -141,7 +160,7 @@
         <td>${date}</td>
         <td>${row.account}</td>
         <td>${row.customer_name}<br><span style="font-size:12px;color:#999">${row.phone}</span></td>
-        <td>A:${row.qty_a} / B:${row.qty_b}</td>
+        <td>${row.product}</td>
         <td style="font-weight:bold">${row.total_qty}</td>
         <td>${row.order_type === 'internal' ? '<span style="color:orange">内购</span>' : '零售'}</td>
         <td>¥${row.total_price}</td>
@@ -152,7 +171,6 @@
   }
 
   function calcStats(data) {
-    // 简单计算今日数据
     const todayStr = new Date().toISOString().split('T')[0];
     const todayOrders = data.filter(o => o.created_at.startsWith(todayStr));
 
@@ -165,50 +183,37 @@
     document.getElementById("statQty").innerText = totalQty;
   }
 
-  // === 导出功能 (核心) ===
+  // 导出功能
   function exportExcel(version) {
     if (allOrders.length === 0) return alert("没有数据可导出");
 
     const isSupply = (version === 'supply');
     const wsData = [];
 
-    // 1. 构建表头
+    // 表头
     if (isSupply) {
-      // 菜鸟模板格式
-      wsData.push([
-        "订单号(自动)", "收件人姓名", "手机", "详细地址", 
-        "物品名称", "数量", "备注"
-      ]);
+      wsData.push(["订单号(自动)", "收件人姓名", "手机", "详细地址", "物品名称", "数量", "备注"]);
     } else {
-      // 内部财务格式
-      wsData.push([
-        "下单时间", "销售员", "类型", "姓名", "电话", "地址", 
-        "A款数量", "B款数量", "总数量", "运费", "总价", "备注"
-      ]);
+      wsData.push(["下单时间", "销售员", "类型", "姓名", "电话", "地址", "产品详情", "A款", "B款", "总数量", "运费", "总价", "备注"]);
     }
 
-    // 2. 填充数据
+    // 数据填充
     allOrders.forEach((o, index) => {
       const row = [];
       if (isSupply) {
-        // 供应链版：脱敏，无价格
+        // 供应链版 (无价格)
         const orderNo = "PRO-" + new Date(o.created_at).getTime() + "-" + index;
-        // 物品名称拼接
-        let goodsName = "鼠标垫";
-        if(o.qty_a > 0) goodsName += ` [A款粗x${o.qty_a}]`;
-        if(o.qty_b > 0) goodsName += ` [B款细x${o.qty_b}]`;
-        
         row.push(
           orderNo, 
           o.customer_name, 
           o.phone, 
           o.address, 
-          goodsName, 
-          o.total_qty, // 按照要求增加的数量统计列
+          o.product, 
+          o.total_qty, 
           o.remarks || ""
         );
       } else {
-        // 财务版
+        // 财务版 (全数据)
         row.push(
           new Date(o.created_at).toLocaleString(),
           o.account,
@@ -216,6 +221,7 @@
           o.customer_name,
           o.phone,
           o.address,
+          o.product,
           o.qty_a,
           o.qty_b,
           o.total_qty,
@@ -227,31 +233,26 @@
       wsData.push(row);
     });
 
-    // 3. 创建 Worksheet
+    // 创建 Excel
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // 4. 设置样式 (红字备注)
-    // 遍历所有行，设置最后一列(备注)为红色
+    // 设置红色备注样式
     const range = XLSX.utils.decode_range(ws['!ref']);
-    const remarkColIndex = isSupply ? 6 : 11; // 备注所在的列索引(从0开始)
+    const remarkColIndex = isSupply ? 6 : 12; // 备注列位置
 
-    for (let R = 1; R <= range.e.r; ++R) { // 跳过表头(R=0)
+    for (let R = 1; R <= range.e.r; ++R) {
       const cellRef = XLSX.utils.encode_cell({r: R, c: remarkColIndex});
-      if (!ws[cellRef]) continue; // 如果单元格为空，跳过
-
-      // 设置字体颜色为红色
-      ws[cellRef].s = {
-        font: { color: { rgb: "FF0000" }, bold: true }
-      };
+      if (ws[cellRef]) {
+        ws[cellRef].s = { font: { color: { rgb: "FF0000" }, bold: true } };
+      }
     }
 
-    // 5. 导出文件
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     
     const fileName = isSupply ? 
-      `发货单_供应链版_${new Date().toISOString().split('T')[0]}.xlsx` : 
-      `销售统计_内部版_${new Date().toISOString().split('T')[0]}.xlsx`;
+      `发货单_供应链_${new Date().toISOString().split('T')[0]}.xlsx` : 
+      `销售统计_内部_${new Date().toISOString().split('T')[0]}.xlsx`;
 
     XLSX.writeFile(wb, fileName);
   }
@@ -265,7 +266,7 @@
 </script>
 
 <footer style="margin-top:40px; text-align:center; font-size:12px; color:#999;">
-  Pro Player Admin System V4.0<br>
+  Pro Player Admin System V4.1<br>
   © Developed by Mars-老刘 & AI
 </footer>
 
