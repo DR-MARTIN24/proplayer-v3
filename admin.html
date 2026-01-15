@@ -2,12 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V7.9</title>
+  <title>Pro Player · 总控台 V8.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
+    // ✅ Key 绝对正确
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -44,15 +45,14 @@
     .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
     
-    /* 数据透视区 */
-    #rawDataArea { background: #333; color: #0f0; padding: 10px; margin-top: 50px; border-radius: 8px; font-family: monospace; font-size: 11px; white-space: pre-wrap; display: none; }
+    #loader { text-align: center; padding: 40px; color: #888; }
   </style>
 </head>
 
 <body>
 
 <h2>
-  <span>Pro Player 总控台 V7.9</span>
+  <span>Pro Player 总控台 V8.0</span>
   <button class="btn-gray" onclick="location.href='sales.html'">返回销售端</button>
 </h2>
 
@@ -75,17 +75,15 @@
 <div class="btn-group">
   <button class="btn-blue" onclick="exportCainiao()">📤 导出菜鸟 (高级版)</button>
   <button class="btn-green" onclick="exportFinance()">💰 导出财务 (中文)</button>
-  <button class="btn-orange" onclick="showGift()">🎁 录入赠送</button>
+  <button class="btn-orange" onclick="document.getElementById('giftModal').classList.add('show')">🎁 录入赠送</button>
   <button class="btn-red" onclick="delSel()">🗑 删除选中</button>
   <button class="btn-gray" onclick="loadData()">🔄 刷新</button>
   
   <input type="file" id="fileIn" accept=".xlsx" style="display:none" onchange="doImport(this)">
   <button class="btn-gray" style="margin-left:auto" onclick="document.getElementById('fileIn').click()">📥 导入回执</button>
-  
-  <button class="btn-gray" onclick="toggleRawData()">🔍 检查数据</button>
 </div>
 
-<div id="statusMsg" style="text-align:center; padding:20px; color:#888;">正在读取数据库...</div>
+<div id="loader">正在连接数据库...</div>
 
 <div class="table-container">
   <table id="mainTable" style="display:none">
@@ -98,8 +96,6 @@
     <tbody id="tbody"></tbody>
   </table>
 </div>
-
-<div id="rawDataArea">点击上方“检查数据”查看原始返回内容...</div>
 
 <div id="giftModal" class="modal">
   <div class="modal-box">
@@ -123,46 +119,40 @@
 <script>
   let allData = [];
 
+  // 1. 无门槛启动
   window.onload = () => { loadData(); };
 
   async function loadData() {
-    document.getElementById("statusMsg").innerText = "正在读取...";
-    // 1. 获取数据 (不加筛选，全部拉取)
-    const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
+    document.getElementById("loader").innerText = "正在读取...";
+    document.getElementById("loader").style.display = "block";
     
-    if(error) {
-      document.getElementById("statusMsg").innerHTML = `<span style="color:red">读取失败: ${error.message}</span>`;
-      document.getElementById("rawDataArea").innerText = "Error: " + error.message;
+    // 简单粗暴读取，不带 filter
+    const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
+
+    if (error) {
+      document.getElementById("loader").innerHTML = `<span style="color:red">读取失败: ${error.message}</span><br>请检查 RLS 或网络`;
       return;
     }
-    
-    allData = data || [];
-    
-    // 2. 显示原始数据 (用于调试)
-    const debugInfo = `✅ Loaded ${allData.length} rows.\nFirst row keys: ${allData.length > 0 ? Object.keys(allData[0]).join(", ") : "None"}\nFirst row data: ${allData.length > 0 ? JSON.stringify(allData[0], null, 2) : "None"}`;
-    document.getElementById("rawDataArea").innerText = debugInfo;
 
-    // 3. 渲染
-    if(allData.length === 0) {
-      document.getElementById("statusMsg").innerText = "暂无数据";
-    } else {
-      document.getElementById("statusMsg").style.display = "none";
-      document.getElementById("mainTable").style.display = "table";
-      renderTable();
-      calcStats();
+    if (!data || data.length === 0) {
+      document.getElementById("loader").innerText = "✅ 连接成功，但没有订单数据 (0条)";
+      return;
     }
+
+    allData = data;
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("mainTable").style.display = "table";
+    renderTable();
+    calcStats();
   }
 
   function renderTable() {
     const box = document.getElementById("tbody");
     box.innerHTML = "";
-    
     allData.forEach(r => {
-      // 强力容错渲染：确保字段名完全匹配
       try {
         const tr = document.createElement("tr");
         
-        // 字段映射 (防止 null)
         const id = (r.id || "").substr(0,8);
         const time = r.created_at ? new Date(r.created_at).toLocaleString() : "-";
         const acc = (r.account || "").split("@")[0];
@@ -170,18 +160,16 @@
         const phone = r.phone || "";
         const qa = r.qty_a || 0;
         const qb = r.qty_b || 0;
-        const total = (r.total_qty !== undefined) ? r.total_qty : (qa+qb);
+        const total = (r.total_qty !== undefined && r.total_qty !== null) ? r.total_qty : (qa+qb);
         const price = r.total_price || 0;
-        const rem = r.remarks || "";
         
-        // 状态与备注样式
+        let rem = r.remarks || "";
+        if(rem.includes("内购") || rem.includes("赠送")) rem = `<span style="color:green;font-weight:bold">${rem}</span>`;
+
         const isShip = !!r.tracking_number;
         const statusHtml = isShip 
           ? `<span style="color:green;font-weight:bold">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank" style="color:green">${r.tracking_number}</a></span>` 
           : `<span style="color:orange">待发货</span>`;
-        
-        let remHtml = rem;
-        if(rem.includes("内购") || rem.includes("赠送")) remHtml = `<span style="color:green;font-weight:bold">${rem}</span>`;
 
         tr.innerHTML = `
           <td><input type="checkbox" class="chk" value="${r.id}"></td>
@@ -194,12 +182,10 @@
           <td><b>${total}</b></td>
           <td>${price}</td>
           <td>${statusHtml}</td>
-          <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${rem}">${remHtml}</td>
+          <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${rem}">${rem}</td>
         `;
         box.appendChild(tr);
-      } catch (e) {
-        console.error("Render error:", e);
-      }
+      } catch (err) { console.error(err); }
     });
   }
 
@@ -223,66 +209,41 @@
     }
   }
 
-  // === 恢复 V7.4 的完美 Excel 导出 (样式+回填列) ===
+  // === 恢复 V7.4 完美 Excel 导出 ===
   function exportCainiao() {
     if(!allData.length) return alert("无数据");
-    
-    // 1. 表头
     const headers = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
-    
-    // 2. 数据构建
-    const data = [
-      ["","收件信息","","","物品信息","","","备注","","回填区"], // 辅助行
-      headers
-    ];
+    const data = [["","收件信息","","","物品信息","","","备注","","回填区"], headers];
     
     allData.forEach(r => {
       let desc = "ProPlayer鼠标垫";
       if(r.qty_a) desc += ` (A款粗*${r.qty_a})`;
       if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
-      
-      data.push([
-        r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""
-      ]);
+      data.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
     });
 
-    // 3. 样式处理
+    if(typeof XLSX === 'undefined') return alert("Excel 库加载失败(网络原因)，请刷新重试");
+
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
-    // 列宽
     ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
     
-    // 遍历单元格加样式
+    // 样式加回
     const range = XLSX.utils.decode_range(ws['!ref']);
     for(let R=0; R<=range.e.r; ++R) {
       for(let C=0; C<=range.e.c; ++C) {
         const addr = XLSX.utils.encode_cell({r:R, c:C});
         if(!ws[addr]) continue;
-        
-        // 基础边框
         ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
-        
-        // 表头颜色 (前两行)
-        if(R < 2) {
-          ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; // 浅绿
-          ws[addr].s.font = { bold: true };
-        }
-        
-        // 备注列 (G列 index 7) 红色
+        if(R < 2) { ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; ws[addr].s.font = { bold: true }; }
         if(R >= 2 && C === 7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
-        
-        // 回填列 (J列 index 9) 黄色
         if(R >= 2 && C === 9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
       }
     }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   function exportFinance() {
-    // 简单的财务导出
     const body = [["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
     allData.forEach(r => body.push([r.created_at, r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number||"未发货", r.remarks, r.tracking_number]));
     const ws = XLSX.utils.aoa_to_sheet(body);
@@ -290,22 +251,17 @@
     XLSX.writeFile(wb, `财务_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
-  // 交互逻辑
-  function showGift() { document.getElementById("giftModal").classList.add("show"); }
   async function submitGift() {
     const type = document.getElementById("gt").value;
     const name = document.getElementById("gn").value;
     const qa = Number(document.getElementById("gqa").value);
     const qb = Number(document.getElementById("gqb").value);
-    
     if(!name || (qa+qb)<=0) return alert("写名字，填数量！");
-    
     const { error } = await window.sb.from("orders").insert({
       account: "admin_gift", customer_name: name, phone: document.getElementById("gp").value, address: document.getElementById("ga").value,
       qty_a: qa, qty_b: qb, total_qty: qa+qb, product: `A款:${qa}, B款:${qb}`, total_price: 0, shipping: 0,
       status: "pending", remarks: `[${type}] ${document.getElementById("gr").value}`, item_category: "日用品"
     });
-    
     if(error) alert(error.message);
     else { alert("✅ 录入成功"); document.getElementById("giftModal").classList.remove("show"); loadData(); }
   }
@@ -314,20 +270,24 @@
   async function delSel() {
     const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
     if(!ids.length) return alert("没选怎么删？");
-    if(confirm(`确定删除这 ${ids.length} 条？`)) {
-      await window.sb.from("orders").delete().in("id", ids);
-      loadData();
-    }
+    if(confirm(`确定删除这 ${ids.length} 条？`)) { await window.sb.from("orders").delete().in("id", ids); loadData(); }
   }
-  
-  function toggleRawData() {
-    const el = document.getElementById("rawDataArea");
-    el.style.display = el.style.display === "block" ? "none" : "block";
-  }
-  
   async function doImport(el) {
     const f = el.files[0]; if(!f) return;
     const r = new FileReader();
     r.onload = async (e) => {
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-      const
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {range:1});
+      let n = 0;
+      for(let row of rows) {
+        let oid, track;
+        for(let k in row) { if(k.includes("编号")) oid = row[k]; if(k.includes("回填") || k.includes("运单")) track = row[k]; }
+        if(oid && track) { const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid); if(!error) n++; }
+      }
+      alert(`✅ 更新 ${n} 条`); el.value=""; loadData();
+    };
+    r.readAsArrayBuffer(f);
+  }
+</script>
+</body>
+</html>
