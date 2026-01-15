@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V8.1 (修正版)</title>
+  <title>Pro Player · 总控台 V8.3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
@@ -28,8 +28,8 @@
     .bar-part { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; transition: width 0.3s; }
 
     .btn-group { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-    button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; } /* 禁用样式 */
+    button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; transition: opacity 0.2s; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; background: #999 !important; } /* 禁用样式 */
     
     .btn-blue { background: #007aff; }
     .btn-green { background: #34c759; }
@@ -43,12 +43,15 @@
     th { background: #fafafa; white-space: nowrap; font-weight: 600; color: #555; }
     tr:hover { background: #f9f9f9; }
     
-    .remark-cell { font-size: 12px; color: #666; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* 流水号样式 */
+    .seq-id { font-family: monospace; font-weight: bold; color: #333; background: #eee; padding: 2px 6px; border-radius: 4px; }
     
     .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 1000; }
     .modal.show { display: flex; }
     .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    
+    #loader { text-align: center; padding: 40px; color: #888; }
   </style>
 </head>
 
@@ -56,8 +59,8 @@
 
 <div class="header">
   <div>
-    <span style="font-size: 20px; font-weight: bold;">Pro Player 总控台 V8.1 (稳定版)</span>
-    <span id="clock" class="clock">🕒 正在同步...</span>
+    <span style="font-size: 20px; font-weight: bold;">Pro Player 总控台 V8.3</span>
+    <span id="clock" class="clock">🕒 同步中...</span>
   </div>
   <button class="btn-gray" onclick="location.href='sales.html'">返回销售端</button>
 </div>
@@ -94,7 +97,7 @@
     <thead>
       <tr>
         <th width="30"><input type="checkbox" onchange="checkAll(this)"></th>
-        <th>编号</th><th>下单时间</th><th>销售员</th><th>收件信息</th><th>产品</th><th>A/B明细</th><th>数量</th><th>总价</th><th>状态</th><th>备注</th>
+        <th>编号 (No.)</th><th>下单时间</th><th>销售员</th><th>收件信息</th><th>产品</th><th>A/B明细</th><th>数量</th><th>总价</th><th>状态</th><th>备注</th>
       </tr>
     </thead>
     <tbody id="tbody">
@@ -109,7 +112,7 @@
     <label>类型</label><select id="gt"><option>活动赠送</option><option>选手推广</option></select>
     <label>姓名</label><input id="gn">
     <label>电话</label><input id="gp">
-    <label>地址</label><input id="ga">
+    <label>地址</label><textarea id="ga" rows="2"></textarea>
     <div style="display:flex; gap:10px">
       <div style="flex:1"><label>A款数</label><input type="number" id="gqa" value="0"></div>
       <div style="flex:1"><label>B款数</label><input type="number" id="gqb" value="0"></div>
@@ -125,31 +128,48 @@
 <script>
   let allData = [];
 
+  // 1. 启动
   window.onload = () => {
     setInterval(() => document.getElementById('clock').innerText = "🕒 " + new Date().toLocaleTimeString(), 1000);
     loadData();
   };
 
+  // 2. 读取 (按 seq_id 倒序，新单在最上面)
   async function loadData() {
-    const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
-    if (error) return alert("读取失败: " + error.message);
+    const tbody = document.getElementById("tbody");
     
+    // 如果你刚跑完 SQL，seq_id 字段就有了。如果没跑，会报错，这里做了兼容。
+    const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
+
+    if (error) {
+      alert("读取失败: " + error.message);
+      return;
+    }
+
     allData = data || [];
     renderTable();
     calcStats();
   }
 
+  // 3. 渲染
   function renderTable() {
     const tbody = document.getElementById("tbody");
     tbody.innerHTML = "";
-    if (!allData.length) { tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">暂无数据</td></tr>`; return; }
+    
+    if (allData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">暂无数据</td></tr>`;
+      return;
+    }
 
     allData.forEach(r => {
       try {
         const tr = document.createElement("tr");
-        const id = (r.id || "").toString().substring(0, 8);
+        
+        // 优先显示 seq_id (流水号)，如果没有则显示 UUID 前8位
+        const displayId = r.seq_id ? `<span class="seq-id">No.${r.seq_id}</span>` : `<span style="color:#999">${(r.id||"").substr(0,8)}</span>`;
+        
         const time = r.created_at ? new Date(r.created_at).toLocaleString() : "-";
-        const account = (r.account || "未知").split("@")[0];
+        const account = (r.account || "").split("@")[0];
         const name = r.customer_name || "无名";
         const phone = r.phone || "";
         const qa = Number(r.qty_a) || 0;
@@ -167,7 +187,7 @@
 
         tr.innerHTML = `
           <td><input type="checkbox" class="chk" value="${r.id}"></td>
-          <td style="font-family:monospace; color:#666;">${id}</td>
+          <td>${displayId}</td>
           <td style="font-size:12px;">${time}</td>
           <td>${account}</td>
           <td><div style="font-weight:bold;">${name}</div><div style="font-size:12px; color:#666;">${phone}</div></td>
@@ -183,6 +203,7 @@
     });
   }
 
+  // 4. 统计
   function calcStats() {
     const todayStr = new Date().toISOString().split("T")[0];
     let n=0, m=0, p=0, sa=0, sb=0;
@@ -204,7 +225,7 @@
 
   function openGift() { document.getElementById('giftModal').classList.add('show'); }
   
-  // ✅ 核心修复：防连点
+  // ✅ 核心修复：按钮防抖 (Disabled Logic)
   async function submitGift() {
     const btn = document.getElementById("giftSubmitBtn");
     const n = document.getElementById('gn').value;
@@ -213,7 +234,7 @@
     
     if(!n || (qa+qb)<=0) return alert("请填写姓名和数量");
     
-    // 1. 禁用按钮
+    // 1. 立刻禁用按钮，防止连点
     btn.disabled = true;
     btn.innerText = "处理中...";
     
@@ -230,55 +251,64 @@
       item_category: "日用品"
     });
     
-    // 2. 恢复按钮
+    // 2. 无论成功失败，恢复按钮状态（如果是成功，稍后会刷新页面，恢复也无所谓）
     btn.disabled = false;
     btn.innerText = "确认";
     
-    if(error) alert(error.message);
-    else { alert("✅ 录入成功"); document.getElementById('giftModal').classList.remove('show'); loadData(); }
+    if(error) {
+      alert("提交失败: " + error.message);
+    } else {
+      alert("✅ 录入成功");
+      document.getElementById('giftModal').classList.remove('show');
+      loadData();
+    }
   }
 
   function checkAll(el) { document.querySelectorAll(".chk").forEach(c => c.checked = el.checked); }
+  
   async function delSel() {
     const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
     if(!ids.length) return alert("没选");
-    if(confirm(`⚠️ 确定删除？`)) { await window.sb.from("orders").delete().in("id", ids); loadData(); }
+    if(confirm(`⚠️ 确定删除这 ${ids.length} 条数据吗？`)) {
+      await window.sb.from("orders").delete().in("id", ids);
+      loadData();
+    }
   }
 
   // 导出逻辑
   function exportCainiao() {
     if(!allData.length) return alert("无数据");
-    const headers = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
-    const data = [["","收件信息","","","物品信息","","","备注","","回填区"], headers];
+    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
+    const d = [["","收件信息","","","物品信息","","","备注","","回填区"], h];
     allData.forEach(r => {
       let desc = "ProPlayer鼠标垫";
       if(r.qty_a) desc += ` (A款粗*${r.qty_a})`;
       if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
-      data.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
+      d.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
     });
-    const ws = XLSX.utils.aoa_to_sheet(data);
+    const ws = XLSX.utils.aoa_to_sheet(d);
     ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
     const range = XLSX.utils.decode_range(ws['!ref']);
     for(let R=0; R<=range.e.r; ++R) {
       for(let C=0; C<=range.e.c; ++C) {
-        const addr = XLSX.utils.encode_cell({r:R, c:C});
-        if(!ws[addr]) continue;
-        ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
-        if(R < 2) { ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; ws[addr].s.font = { bold: true }; }
-        if(R >= 2 && C === 7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
-        if(R >= 2 && C === 9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
+        const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
+        if(!cell) continue;
+        cell.s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
+        if(R < 2) { cell.s.fill = { fgColor: { rgb: "CCFFCC" } }; cell.s.font = { bold: true }; }
+        if(R >= 2 && C === 7) cell.s.font = { color: { rgb: "FF0000" }, bold: true };
+        if(R >= 2 && C === 9) cell.s.fill = { fgColor: { rgb: "FFFFCC" } };
       }
     }
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, "菜鸟发货单.xlsx");
   }
 
   function exportFinance() {
-    const body = [["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
-    allData.forEach(r => body.push([new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发":"未发", r.remarks, r.tracking_number]));
+    const body = [["流水号", "时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
+    allData.forEach(r => body.push([r.seq_id || "-", new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发":"未发", r.remarks, r.tracking_number]));
     const ws = XLSX.utils.aoa_to_sheet(body);
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务");
-    XLSX.writeFile(wb, `财务_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, "财务单.xlsx");
   }
 
   async function doImport(el) {
@@ -290,14 +320,8 @@
       let n = 0;
       for(let row of rows) {
         let oid, track;
-        for(let k in row) {
-          if(k.includes("编号")) oid = row[k];
-          if(k.includes("回填") || k.includes("运单")) track = row[k];
-        }
-        if(oid && track) {
-          const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid);
-          if(!error) n++;
-        }
+        for(let k in row) { if(k.includes("编号")) oid = row[k]; if(k.includes("回填") || k.includes("运单")) track = row[k]; }
+        if(oid && track) { const {error} = await window.sb.from("orders").update({tracking_number:track, status:'shipped'}).eq("id",oid); if(!error) n++; }
       }
       alert(`✅ 更新 ${n} 条`); el.value=""; loadData();
     };
