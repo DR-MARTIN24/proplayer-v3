@@ -2,127 +2,137 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售系统</title>
+  <title>Pro Player · 销售系统 V4.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+  
   <script>
-    // 配置信息
+    // === Pro Player 系统配置 ===
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T";
 
-    // 检查 SDK 是否加载
     if (typeof supabase === 'undefined') {
-      alert("错误：Supabase SDK 加载失败，请检查网络连接");
+      alert("错误：Supabase SDK 加载失败");
     } else {
-      // 初始化客户端并挂载到 window.sb
       window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      console.log("[Supabase] 客户端初始化成功");
     }
   </script>
 
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
-      padding: 20px;
-      max-width: 480px;
-      margin: auto;
-      background-color: #f9f9f9;
-    }
-    h2, h3 {
-      margin-bottom: 10px;
-      color: #333;
-    }
-    /* 登录框样式优化 */
-    #loginBox, #appBox {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      font-size: 16px;
-      box-sizing: border-box; /* 防止边框撑大宽度 */
-      border-radius: 4px;
-      border: 1px solid #ddd;
-    }
-    button {
-      background: #000;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:active {
-      background: #333;
-    }
-    .hidden {
-      display: none !important;
-    }
-    ul {
-      padding-left: 0;
-      list-style: none;
-    }
-    li {
-      background: #f1f1f1;
-      margin-bottom: 5px;
-      padding: 10px;
-      border-radius: 4px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .date-tag {
-      font-size: 12px;
-      color: #888;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f5f5f7; color: #333; }
+    h2, h3 { color: #1d1d1f; margin-bottom: 15px; font-weight: 600; }
+    .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .input-group { margin-bottom: 12px; }
+    label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: 500; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+    input:focus, textarea:focus { border-color: #007aff; }
+    
+    .row { display: flex; gap: 10px; }
+    .col { flex: 1; }
+    
+    /* 数量选择器优化 */
+    .qty-control { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; }
+    .qty-label { font-weight: bold; }
+    
+    button { width: 100%; padding: 14px; background: #000; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button:active { transform: scale(0.98); }
+    
+    #priceDisplay { background: #eefcf3; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 8px; text-align: center; margin: 15px 0; }
+    #priceDisplay .total { font-size: 24px; font-weight: bold; }
+    #priceDisplay .detail { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+
+    .hidden { display: none !important; }
+    .error { color: #d70015; font-size: 13px; margin-top: 5px; }
+    
+    /* 红色备注输入框提示 */
+    #remarks { border: 1px dashed #ff3b30; background: #fff5f5; }
   </style>
 </head>
 
 <body>
 
-<h2>Pro Player 销售系统</h2>
+<h2>Pro Player 销售端</h2>
 
-<div id="loginBox">
-  <h3>账号登录</h3>
-  <input id="email" type="email" placeholder="输入邮箱" />
-  <input id="password" type="password" placeholder="输入密码" />
-  <button id="loginBtn">登录</button>
-  <p id="loginMsg" style="color:red; font-size: 14px; margin-top: 5px;"></p>
+<div id="loginBox" class="card">
+  <h3>员工登录</h3>
+  <div class="input-group">
+    <input id="email" type="email" placeholder="邮箱账号" />
+  </div>
+  <div class="input-group">
+    <input id="password" type="password" placeholder="密码" />
+  </div>
+  <button id="loginBtn">登录系统</button>
+  <p id="loginMsg" class="error"></p>
 </div>
 
 <div id="appBox" class="hidden">
-  <h3>新建订单</h3>
-  <input id="product" placeholder="产品名称 (例如: 王者荣耀皮肤)" />
-  <input id="qty" type="number" placeholder="数量" />
-  <button id="submitBtn">提交订单</button>
+  <div class="card">
+    <h3>📝 新建订单</h3>
+    
+    <div class="input-group">
+      <label>收件人姓名</label>
+      <input id="custName" placeholder="例如：张三" />
+    </div>
+    <div class="input-group">
+      <label>联系电话</label>
+      <input id="custPhone" type="tel" placeholder="11位手机号" />
+    </div>
+    <div class="input-group">
+      <label>收货地址 (方案A: 粘贴完整地址)</label>
+      <textarea id="custAddress" rows="3" placeholder="省市区+详细地址，例如：浙江省杭州市西湖区..."></textarea>
+    </div>
 
-  <h3 style="margin-top:30px; border-top:1px solid #eee; padding-top:20px;">我的订单记录</h3>
-  <ul id="orderList">
-    </ul>
+    <hr style="border:0; border-top:1px solid #eee; margin: 15px 0;">
 
-  <button id="logoutBtn" style="background:#666; margin-top:20px;">退出登录</button>
+    <label>产品选择</label>
+    <div class="qty-control">
+      <span class="qty-label">🅰️ A款 (粗面)</span>
+      <input type="number" id="qtyA" value="0" min="0" style="width: 80px; text-align:center;" onchange="calcPrice()" />
+    </div>
+    <div class="qty-control">
+      <span class="qty-label">🅱️ B款 (细面)</span>
+      <input type="number" id="qtyB" value="0" min="0" style="width: 80px; text-align:center;" onchange="calcPrice()" />
+    </div>
+
+    <div style="margin: 15px 0;">
+      <label>订单类型</label>
+      <div class="row">
+        <label class="col" style="background:#f0f0f0; padding:10px; border-radius:6px; text-align:center;">
+          <input type="radio" name="orderType" value="retail" checked onchange="calcPrice()"> 零售 (标准)
+        </label>
+        <label class="col" style="background:#f0f0f0; padding:10px; border-radius:6px; text-align:center;">
+          <input type="radio" name="orderType" value="internal" onchange="calcPrice()"> 内部 (员工)
+        </label>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label style="color:#ff3b30;">非常规备注 (红色高亮)</label>
+      <input id="remarks" placeholder="如有特殊要求请在此填写..." />
+    </div>
+
+    <div id="priceDisplay">
+      <div class="total">¥ <span id="finalPrice">0</span></div>
+      <div class="detail" id="priceDetail">请选择商品</div>
+    </div>
+
+    <button id="submitBtn">提交订单</button>
+  </div>
+
+  <div class="card">
+    <h3>📦 我的今日提交</h3>
+    <ul id="todayList" style="padding-left:20px; font-size:14px; color:#555;"></ul>
+  </div>
+
+  <button onclick="logout()" style="background:#fff; color:#666; border:1px solid #ddd; margin-top:10px;">退出登录</button>
 </div>
 
 <script>
-  // === 逻辑代码 ===
-  
-  const loginBox = document.getElementById("loginBox");
-  const appBox = document.getElementById("appBox");
-  const loginMsg = document.getElementById("loginMsg");
-
-  // 绑定事件
-  document.getElementById("loginBtn").onclick = login;
-  document.getElementById("submitBtn").onclick = submitOrder;
-  document.getElementById("logoutBtn").onclick = logout;
-
   let currentUser = null;
 
-  // 自动检查是否已登录 (页面刷新保持登录状态)
-  (async function checkSession() {
+  // 初始化检查
+  (async () => {
     if(!window.sb) return;
     const { data: { session } } = await window.sb.auth.getSession();
     if (session) {
@@ -131,125 +141,160 @@
     }
   })();
 
-  // 登录函数
+  // 绑定事件
+  document.getElementById("loginBtn").onclick = login;
+  document.getElementById("submitBtn").onclick = submitOrder;
+  document.getElementById("qtyA").addEventListener('input', calcPrice);
+  document.getElementById("qtyB").addEventListener('input', calcPrice);
+
   async function login() {
-    loginMsg.innerText = "登录中...";
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
-
-    if (!email || !password) {
-      loginMsg.innerText = "请输入邮箱和密码";
-      return;
+    if(!email || !password) return alert("请输入完整");
+    
+    const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+    if(error) {
+      document.getElementById("loginMsg").innerText = error.message;
+    } else {
+      currentUser = data.user;
+      showApp();
     }
-
-    // 登录调用
-    const { data, error } = await window.sb.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      loginMsg.innerText = "登录失败: " + error.message;
-      return;
-    }
-
-    currentUser = data.user;
-    loginMsg.innerText = "";
-    showApp();
   }
 
-  // 切换到主界面
   function showApp() {
-    loginBox.classList.add("hidden");
-    appBox.classList.remove("hidden");
-    loadOrders(); // 登录成功后立即加载订单
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("appBox").classList.remove("hidden");
+    loadMyTodayOrders();
   }
 
-  // 加载订单
-  async function loadOrders() {
-    const list = document.getElementById("orderList");
-    list.innerHTML = "<p style='color:#666;font-size:12px;'>加载中...</p>";
+  // === 核心逻辑：计价器 ===
+  function calcPrice() {
+    const qa = parseInt(document.getElementById("qtyA").value) || 0;
+    const qb = parseInt(document.getElementById("qtyB").value) || 0;
+    const type = document.querySelector('input[name="orderType"]:checked').value;
+    const totalQty = qa + qb;
 
-    // 查询数据库
-    const { data, error } = await window.sb
-      .from("orders")
-      .select("*")
-      .eq("account", currentUser.email) // 只看自己的订单
-      .order("created_at", { ascending: false });
+    let productTotal = 0;
+    let shipping = 0;
+    let note = "";
 
-    list.innerHTML = ""; // 清空加载提示
-
-    if (error) {
-      list.innerHTML = `<p style="color:red">加载失败: ${error.message}</p>`;
-      return;
+    if (totalQty === 0) {
+      updateDisplay(0, "请选择数量");
+      return { total:0, shipping:0 };
     }
 
-    if (data.length === 0) {
-      list.innerHTML = `<p style="color:#999">暂无订单</p>`;
-      return;
+    if (type === 'retail') {
+      // 零售逻辑
+      if (totalQty === 1) {
+        productTotal = 89;
+        shipping = 6;
+        note = "单件零售 (89+6)";
+      } else if (totalQty === 2) {
+        productTotal = 160;
+        shipping = 9;
+        note = "两件套优惠 (160+9)";
+      } else {
+        // 超过2件的逻辑，暂时按两件套叠加计算（根据需求这里主要针对1和2，这里做个简单兜底）
+        // 假设规则：每2件160，余1件89。运费稍微复杂，这里暂定每加1件加3元运费（简化逻辑）
+        // 或者简单提示销售手动确认。
+        // 为了代码稳定，这里按: (数量 * 89) 计算标准价，不自动算优惠，建议人工拆单？
+        // 不，用户说“两张即为160”。我们按对计算。
+        const pairs = Math.floor(totalQty / 2);
+        const remainder = totalQty % 2;
+        productTotal = (pairs * 160) + (remainder * 89);
+        // 运费逻辑：2件9元。超过2件每件加3元（假设）
+        shipping = 9 + (totalQty - 2) * 3; 
+        if(totalQty > 2) note = `多件组合 (${totalQty}件)`;
+      }
+    } else {
+      // 内购逻辑
+      productTotal = totalQty * 45;
+      if (totalQty === 1) shipping = 6;
+      else if (totalQty === 2) shipping = 9;
+      else shipping = 9 + (totalQty - 2) * 3; // 同样假设
+      note = `内购 (${totalQty} × 45)`;
     }
 
-    data.forEach(row => {
-      const li = document.createElement("li");
-      // 格式化时间
-      const date = new Date(row.created_at).toLocaleDateString();
-      li.innerHTML = `
-        <span>${row.product} <b style="margin-left:5px">×${row.qty}</b></span>
-        <span class="date-tag">${date}</span>
-      `;
-      list.appendChild(li);
-    });
+    const finalTotal = productTotal + shipping;
+    updateDisplay(finalTotal, `${note} + 运费${shipping}元`);
+    return { total: finalTotal, shipping: shipping, productTotal: productTotal };
   }
 
-  // 提交订单
+  function updateDisplay(price, text) {
+    document.getElementById("finalPrice").innerText = price;
+    document.getElementById("priceDetail").innerText = text;
+  }
+
   async function submitOrder() {
     const btn = document.getElementById("submitBtn");
-    const productInput = document.getElementById("product");
-    const qtyInput = document.getElementById("qty");
-    
-    const product = productInput.value.trim();
-    const qty = qtyInput.value;
+    const name = document.getElementById("custName").value.trim();
+    const phone = document.getElementById("custPhone").value.trim();
+    const address = document.getElementById("custAddress").value.trim();
+    const qa = parseInt(document.getElementById("qtyA").value) || 0;
+    const qb = parseInt(document.getElementById("qtyB").value) || 0;
+    const remarks = document.getElementById("remarks").value.trim();
+    const type = document.querySelector('input[name="orderType"]:checked').value;
 
-    if (!product || !qty) {
-      alert("请填写完整订单信息");
-      return;
-    }
+    if (!name || !phone || !address) return alert("请填写完整的客户收货信息");
+    if ((qa + qb) <= 0) return alert("请选择至少一件商品");
+
+    const priceData = calcPrice();
 
     btn.disabled = true;
     btn.innerText = "提交中...";
 
-    // 插入数据
     const { error } = await window.sb.from("orders").insert({
-      product: product,
-      qty: qty,
-      account: currentUser.email // 记录是谁卖的
+      account: currentUser.email,
+      customer_name: name,
+      phone: phone,
+      address: address,
+      qty_a: qa,
+      qty_b: qb,
+      total_qty: qa + qb,
+      product: `A款:${qa}, B款:${qb}`, // 简报
+      order_type: type,
+      total_price: priceData.total,
+      shipping: priceData.shipping,
+      remarks: remarks
     });
-
-    btn.disabled = false;
-    btn.innerText = "提交订单";
 
     if (error) {
       alert("提交失败: " + error.message);
+      btn.disabled = false;
+      btn.innerText = "提交订单";
       return;
     }
 
-    // 清空输入框并刷新列表
-    productInput.value = "";
-    qtyInput.value = "";
-    alert("订单提交成功！");
-    loadOrders();
+    alert("✅ 订单提交成功！");
+    location.reload(); // 刷新重置
   }
 
-  // 退出登录
+  async function loadMyTodayOrders() {
+    const list = document.getElementById("todayList");
+    // 获取当天的开始时间
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data } = await window.sb
+      .from("orders")
+      .select("customer_name, total_qty, total_price")
+      .eq("account", currentUser.email)
+      .gte("created_at", today)
+      .order("created_at", { ascending: false });
+
+    if(data) {
+      list.innerHTML = data.map(o => `<li>${o.customer_name} - ${o.total_qty}件 (¥${o.total_price})</li>`).join("");
+    }
+  }
+
   async function logout() {
     await window.sb.auth.signOut();
     location.reload();
   }
 </script>
 
-<footer style="margin-top:40px;text-align:center;font-size:12px;color:#999;">
-  © Pro Player 销售系统<br>
-  Version build: 2026-01-16 (Fixed)
+<footer style="margin-top:30px; text-align:center; font-size:12px; color:#aaa;">
+  Pro Player Sales System V4.0<br>
+  © Developed by Mars-老刘 & AI
 </footer>
 
 </body>

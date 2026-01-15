@@ -2,112 +2,271 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 管理后台</title>
+  <title>Pro Player · 管理后台 V4.0</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Supabase SDK（必须在 config.js 之前加载） -->
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+
+  <script>
+    const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T";
+    if (typeof supabase !== 'undefined') {
+      window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  </script>
 
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont;
-      padding: 20px;
-      max-width: 480px;
-      margin: auto;
-    }
-    h2, h3 {
-      margin-bottom: 10px;
-    }
-    table {
-      width: 100%;
-      margin-top: 10px;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border: 1px solid #ddd;
-    }
-    button {
-      background: #000;
-      color: #fff;
-      border: none;
-      padding: 10px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #444;
-    }
-    .hidden {
-      display: none;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background: #f0f2f5; }
+    
+    /* 顶部统计卡片 */
+    .dashboard { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-card { flex: 1; min-width: 150px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .stat-title { font-size: 12px; color: #888; text-transform: uppercase; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #333; margin-top: 5px; }
+
+    /* 表格样式 */
+    .table-container { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+    th { background: #f8f9fa; font-weight: 600; color: #555; }
+    
+    .remark-cell { color: #d70015; font-weight: 500; } /* 网页端备注红色显示 */
+    
+    .btn-group { margin-bottom: 15px; display: flex; gap: 10px; }
+    button { padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
+    .btn-primary { background: #007aff; color: white; }
+    .btn-success { background: #34c759; color: white; }
+    .btn-danger { background: #ff3b30; color: white; }
+    button:hover { opacity: 0.9; }
+
+    /* 加载动画 */
+    .loader { text-align: center; padding: 20px; color: #999; }
   </style>
 </head>
 
 <body>
 
-<h2>Pro Player 管理后台</h2>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+  <h2 style="margin:0;">Pro Player 管理控制台 V4.0</h2>
+  <button class="btn-danger" onclick="logout()">退出系统</button>
+</div>
 
-<p id="msg"></p>
+<div class="dashboard">
+  <div class="stat-card">
+    <div class="stat-title">今日订单数</div>
+    <div class="stat-value" id="statOrders">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-title">今日销售额 (元)</div>
+    <div class="stat-value" id="statMoney">0.00</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-title">今日垫子总数 (张)</div>
+    <div class="stat-value" id="statQty">0</div>
+  </div>
+</div>
 
-<table>
-  <thead>
-    <tr>
-      <th>销售账号</th>
-      <th>产品</th>
-      <th>数量</th>
-      <th>时间</th>
-    </tr>
-  </thead>
-  <tbody id="orderList"></tbody>
-</table>
+<div class="table-container">
+  <div class="btn-group">
+    <button class="btn-primary" onclick="exportExcel('supply')">📤 导出供应链发货单 (V2)</button>
+    <button class="btn-success" onclick="exportExcel('finance')">💰 导出内部对账单 (含金额)</button>
+    <button style="background:#eee; color:#333;" onclick="loadData()">🔄 刷新列表</button>
+  </div>
 
-<button onclick="logout()">退出登录</button>
+  <div id="loader" class="loader">数据加载中...</div>
+
+  <table id="dataTable" style="display:none;">
+    <thead>
+      <tr>
+        <th width="15%">时间</th>
+        <th width="10%">销售员</th>
+        <th width="10%">收件人</th>
+        <th width="20%">产品详情</th>
+        <th width="5%">总数</th>
+        <th width="10%">类型</th>
+        <th width="10%">总价</th>
+        <th width="20%">备注 (红字)</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
 
 <script>
+  let allOrders = [];
+
+  // 初始化
   (async () => {
     const { data: { user } } = await window.sb.auth.getUser();
     if (!user) {
-      msg.innerText = "请先登录管理员账号";
+      alert("请先登录管理员账号");
       location.href = "sales.html";
       return;
     }
+    loadData();
+  })();
 
-    // 加载所有订单
+  async function loadData() {
+    document.getElementById("loader").style.display = "block";
+    document.getElementById("dataTable").style.display = "none";
+
+    // 获取所有订单，按时间倒序
     const { data, error } = await window.sb
       .from("orders")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      msg.innerText = error.message;
+      alert("加载失败: " + error.message);
       return;
     }
+    
+    allOrders = data;
+    renderTable(data);
+    calcStats(data);
+    
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("dataTable").style.display = "table";
+  }
 
-    const list = document.getElementById("orderList");
-    data.forEach(order => {
+  function renderTable(data) {
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+    
+    data.forEach(row => {
+      const date = new Date(row.created_at).toLocaleString('zh-CN', {month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${order.account}</td>
-        <td>${order.product}</td>
-        <td>${order.qty}</td>
-        <td>${order.created_at}</td>
+        <td>${date}</td>
+        <td>${row.account}</td>
+        <td>${row.customer_name}<br><span style="font-size:12px;color:#999">${row.phone}</span></td>
+        <td>A:${row.qty_a} / B:${row.qty_b}</td>
+        <td style="font-weight:bold">${row.total_qty}</td>
+        <td>${row.order_type === 'internal' ? '<span style="color:orange">内购</span>' : '零售'}</td>
+        <td>¥${row.total_price}</td>
+        <td class="remark-cell">${row.remarks || '-'}</td>
       `;
-      list.appendChild(tr);
+      tbody.appendChild(tr);
     });
-  })();
+  }
+
+  function calcStats(data) {
+    // 简单计算今日数据
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayOrders = data.filter(o => o.created_at.startsWith(todayStr));
+
+    document.getElementById("statOrders").innerText = todayOrders.length;
+    
+    const totalMoney = todayOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
+    document.getElementById("statMoney").innerText = totalMoney.toFixed(2);
+
+    const totalQty = todayOrders.reduce((sum, o) => sum + (o.total_qty || 0), 0);
+    document.getElementById("statQty").innerText = totalQty;
+  }
+
+  // === 导出功能 (核心) ===
+  function exportExcel(version) {
+    if (allOrders.length === 0) return alert("没有数据可导出");
+
+    const isSupply = (version === 'supply');
+    const wsData = [];
+
+    // 1. 构建表头
+    if (isSupply) {
+      // 菜鸟模板格式
+      wsData.push([
+        "订单号(自动)", "收件人姓名", "手机", "详细地址", 
+        "物品名称", "数量", "备注"
+      ]);
+    } else {
+      // 内部财务格式
+      wsData.push([
+        "下单时间", "销售员", "类型", "姓名", "电话", "地址", 
+        "A款数量", "B款数量", "总数量", "运费", "总价", "备注"
+      ]);
+    }
+
+    // 2. 填充数据
+    allOrders.forEach((o, index) => {
+      const row = [];
+      if (isSupply) {
+        // 供应链版：脱敏，无价格
+        const orderNo = "PRO-" + new Date(o.created_at).getTime() + "-" + index;
+        // 物品名称拼接
+        let goodsName = "鼠标垫";
+        if(o.qty_a > 0) goodsName += ` [A款粗x${o.qty_a}]`;
+        if(o.qty_b > 0) goodsName += ` [B款细x${o.qty_b}]`;
+        
+        row.push(
+          orderNo, 
+          o.customer_name, 
+          o.phone, 
+          o.address, 
+          goodsName, 
+          o.total_qty, // 按照要求增加的数量统计列
+          o.remarks || ""
+        );
+      } else {
+        // 财务版
+        row.push(
+          new Date(o.created_at).toLocaleString(),
+          o.account,
+          o.order_type,
+          o.customer_name,
+          o.phone,
+          o.address,
+          o.qty_a,
+          o.qty_b,
+          o.total_qty,
+          o.shipping,
+          o.total_price,
+          o.remarks || ""
+        );
+      }
+      wsData.push(row);
+    });
+
+    // 3. 创建 Worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // 4. 设置样式 (红字备注)
+    // 遍历所有行，设置最后一列(备注)为红色
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const remarkColIndex = isSupply ? 6 : 11; // 备注所在的列索引(从0开始)
+
+    for (let R = 1; R <= range.e.r; ++R) { // 跳过表头(R=0)
+      const cellRef = XLSX.utils.encode_cell({r: R, c: remarkColIndex});
+      if (!ws[cellRef]) continue; // 如果单元格为空，跳过
+
+      // 设置字体颜色为红色
+      ws[cellRef].s = {
+        font: { color: { rgb: "FF0000" }, bold: true }
+      };
+    }
+
+    // 5. 导出文件
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    
+    const fileName = isSupply ? 
+      `发货单_供应链版_${new Date().toISOString().split('T')[0]}.xlsx` : 
+      `销售统计_内部版_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+  }
 
   async function logout() {
-    await window.sb.auth.signOut();
-    location.href = "sales.html";
+    if(confirm("确定退出管理后台？")) {
+      await window.sb.auth.signOut();
+      location.href = "sales.html";
+    }
   }
 </script>
 
-<footer style="margin-top:40px;font-size:12px;color:#666;">
-  © Pro Player 管理后台<br>
-  Developed by Mars-老刘 & AI<br>
-  Version build: 2026-01-16
+<footer style="margin-top:40px; text-align:center; font-size:12px; color:#999;">
+  Pro Player Admin System V4.0<br>
+  © Developed by Mars-老刘 & AI
 </footer>
 
 </body>
