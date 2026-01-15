@@ -5,7 +5,7 @@
   <title>Pro Player · 销售系统</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Supabase SDK（必须在 config.js 之前） -->
+  <!-- Supabase SDK（必须在 config.js 之前加载） -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./config.js"></script>
 
@@ -90,7 +90,8 @@
       return;
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // 使用 window.sb（避免 supabase 命名冲突）
+    const { data, error } = await window.sb.auth.signInWithPassword({
       email,
       password
     });
@@ -112,7 +113,7 @@
     const list = document.getElementById("orderList");
     list.innerHTML = "";
 
-    const { data, error } = await supabase
+    const { data, error } = await window.sb
       .from("orders")
       .select("*")
       .order("created_at", { ascending: false });
@@ -139,7 +140,7 @@
       return;
     }
 
-    const { error } = await supabase.from("orders").insert({
+    const { error } = await window.sb.from("orders").insert({
       product: product,
       qty: qty,
       account: currentUser.email
@@ -158,7 +159,7 @@
 
   // 退出登录
   async function logout() {
-    await supabase.auth.signOut();
+    await window.sb.auth.signOut();
     location.reload();
   }
 </script>
