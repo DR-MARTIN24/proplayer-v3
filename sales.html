@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售系统 V8.2</title>
+  <title>Pro Player · 销售 V8.3 (颜值修复版)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js' defer></script>
@@ -14,206 +14,312 @@
   </script>
 
   <style>
-    body { font-family: -apple-system, sans-serif; padding: 15px; background: #f2f2f7; max-width: 500px; margin: auto; }
-    .card { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    input, textarea, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 10px; display: block; }
-    label { font-size: 12px; color: #666; font-weight: bold; margin-bottom: 5px; display: block; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; max-width: 500px; margin: auto; background: #f2f2f7; color: #1c1c1e; }
+    h2 { margin: 0 0 15px 0; font-weight: 800; text-align: center; color: #333; }
     
-    .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color: #fff; margin-bottom: 10px; }
-    .btn-blue { background: #007aff; }
-    .btn-gray { background: #e5e5ea; color: #333; }
-    .btn-small { padding: 5px 10px; font-size: 12px; width: auto; float: right; }
+    .card { background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; transition: transform 0.2s; }
     
-    .row { display: flex; gap: 10px; align-items: center; }
-    .col { flex: 1; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; font-size: 13px; color: #8e8e93; margin-bottom: 6px; font-weight: 600; }
+    input, textarea, select { width: 100%; padding: 14px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; -webkit-appearance: none; background: #fff; transition: border 0.2s; }
+    input:focus, textarea:focus { border-color: #007aff; outline: none; }
+    
+    .qty-control { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 10px 15px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #eee; }
+    .qty-title { font-weight: bold; font-size: 15px; }
+    .qty-input { width: 80px; text-align: center; font-weight: bold; background: #fff; border: 1px solid #ddd; padding: 8px; border-radius: 6px; }
+
+    .type-selector { display: flex; background: #e5e5ea; padding: 4px; border-radius: 10px; margin-bottom: 20px; }
+    .type-option { flex: 1; text-align: center; padding: 10px; font-size: 14px; font-weight: 600; color: #666; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .type-selector input[type="radio"] { display: none; }
+    .type-selector input[type="radio"]:checked + div { background: #fff; color: #000; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    #priceDisplay { background: #34c759; color: #fff; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0; box-shadow: 0 4px 10px rgba(52, 199, 89, 0.3); }
+    .total-price { font-size: 32px; font-weight: 800; display: block; }
+    .price-note { font-size: 13px; opacity: 0.9; margin-top: 5px; }
+    
+    .btn-main { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+    .btn-main:active { opacity: 0.8; transform: scale(0.98); }
+    .btn-main:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+    
+    .btn-ocr { width: 100%; background: #e5e5ea; color: #333; padding: 12px; border-radius: 10px; border: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 20px; cursor: pointer; }
+    
+    .btn-logout { background: transparent; color: #ff3b30; border: 1px solid #ff3b30; width: 100%; padding: 12px; border-radius: 10px; font-weight: 600; margin-top: 20px; }
+
+    .hidden { display: none !important; }
     
     /* 弹窗 */
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99; align-items:center; justify-content:center; }
-    .modal.show { display: flex; }
-    .modal-box { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 99; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+    .modal-content { background: #fff; padding: 20px; border-radius: 16px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     
-    .hidden { display: none !important; }
+    .today-item { border-bottom: 1px solid #f0f0f0; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+    .today-item:last-child { border-bottom: none; }
+    .tracking-link { color: #34c759; text-decoration: none; font-weight: bold; font-size: 12px; }
   </style>
 </head>
 
 <body>
-  <div class="card" style="text-align:center;">
-    <h2>🚀 Pro Player V8.2</h2>
-    <div id="loginArea">
-      <input id="email" placeholder="邮箱" />
-      <input id="pass" type="password" placeholder="密码" />
-      <button class="btn btn-blue" onclick="doLogin()">登录</button>
-    </div>
-    <div id="welcomeArea" class="hidden">
-      <p>欢迎, <span id="userEmail"></span></p>
-      <button class="btn btn-gray" style="background:#333; color:#fff" onclick="goAdmin()">🔧 进入总控台</button>
-      <button class="btn btn-gray" onclick="location.reload()">退出</button>
-    </div>
+
+<h2>🚀 Pro Player 销售 V8.3</h2>
+
+<div id="loginBox" class="card">
+  <h3 style="margin-top:0">员工登录</h3>
+  <input id="email" type="email" placeholder="邮箱账号" style="margin-bottom:10px;" />
+  <input id="password" type="password" placeholder="密码" style="margin-bottom:15px;" />
+  <button id="loginBtn" class="btn-main" style="background:#000;">进入系统</button>
+  <p id="loginMsg" style="color:#ff3b30; font-size:13px; margin-top:10px; text-align:center;"></p>
+</div>
+
+<div id="appBox" class="hidden">
+  <div class="card" style="padding: 10px;">
+    <label style="margin-bottom:10px">🏆 今日战报</label>
+    <div id="rankList" style="display:flex; gap:10px; overflow-x:auto; font-size:12px; padding-bottom:5px;"></div>
   </div>
 
-  <div id="mainArea" class="hidden">
-    <button class="btn btn-gray" onclick="document.getElementById('ocrModal').classList.add('show')">📷 智能识别 (截图/粘贴)</button>
-
-    <div class="card">
-      <h3>📝 新建订单</h3>
-      <label>姓名</label><input id="cName" placeholder="必填">
-      <label>电话</label><input id="cPhone" type="tel" placeholder="必填">
-      <label>地址</label><textarea id="cAddr" rows="2"></textarea>
-      
-      <div class="row" style="margin-bottom:10px;">
-        <div class="col"><label>A款(粗)</label><input type="number" id="qA" value="0" oninput="calc()"></div>
-        <div class="col"><label>B款(细)</label><input type="number" id="qB" value="0" oninput="calc()"></div>
-      </div>
-      
-      <label>类型</label>
-      <select id="oType" onchange="calc()">
-        <option value="retail">零售客户</option>
-        <option value="internal">员工内购</option>
-      </select>
-      
-      <label>备注</label><input id="rem">
-      
-      <div style="background:#eef; padding:10px; border-radius:8px; text-align:center; margin-bottom:10px;">
-        总价: <span style="font-weight:bold; color:#007aff; font-size:20px;">¥<span id="showPrice">0</span></span>
-      </div>
-      
-      <button class="btn btn-blue" onclick="submitOrder()">提交订单</button>
+  <div class="card">
+    <h3>📝 新建订单</h3>
+    
+    <div class="btn-ocr" onclick="openOcrModal()">
+      <span>📷</span> 智能识别 (截图/粘贴)
     </div>
 
-    <div class="card">
-      <h3>📦 今日已交</h3>
-      <div id="list"></div>
+    <div class="input-group">
+      <label>收件人姓名 <span style="color:red">*</span></label>
+      <input id="custName" placeholder="必须填写" />
     </div>
+    <div class="input-group">
+      <label>联系电话 <span style="color:red">*</span></label>
+      <input id="custPhone" type="tel" placeholder="11位手机号" />
+    </div>
+    <div class="input-group">
+      <label>收货地址</label>
+      <textarea id="custAddress" rows="2" placeholder="省市区+详细地址"></textarea>
+    </div>
+
+    <hr style="border:0; border-top:1px solid #f0f0f0; margin: 20px 0;">
+
+    <div class="qty-control">
+      <div class="qty-title">🅰️ A款 (粗面)</div>
+      <input type="number" id="qtyA" class="qty-input" placeholder="0" oninput="calcPrice()" />
+    </div>
+    <div class="qty-control">
+      <div class="qty-title">🅱️ B款 (细面)</div>
+      <input type="number" id="qtyB" class="qty-input" placeholder="0" oninput="calcPrice()" />
+    </div>
+    
+    <div class="type-selector">
+      <label class="type-option">
+        <input type="radio" name="orderType" value="retail" checked onchange="calcPrice()">
+        <div>零售客户</div>
+      </label>
+      <label class="type-option">
+        <input type="radio" name="orderType" value="internal" onchange="calcPrice()">
+        <div>员工内购</div>
+      </label>
+    </div>
+
+    <div class="input-group">
+      <label>备注</label>
+      <input id="remarks" placeholder="可选..." />
+    </div>
+
+    <div id="priceDisplay">
+      <span class="total-price">¥ <span id="finalPrice">0</span></span>
+      <div class="price-note" id="priceDetail">请选择商品</div>
+    </div>
+
+    <button id="submitBtn" class="btn-main">提交订单</button>
   </div>
 
-  <div id="ocrModal" class="modal">
-    <div class="modal-box">
-      <h3>智能识别</h3>
-      <textarea id="smartText" rows="5" placeholder="直接粘贴微信里的：姓名 电话 地址..."></textarea>
-      <input type="file" id="smartImg" accept="image/*">
-      <div id="ocrLog" style="color:orange; font-size:12px;"></div>
-      <div class="row">
-        <button class="btn btn-gray col" onclick="document.getElementById('ocrModal').classList.remove('show')">取消</button>
-        <button class="btn btn-blue col" onclick="runSmart()">识别填充</button>
-      </div>
+  <div class="card">
+    <h3>📦 我的今日订单</h3>
+    <div id="todayList"></div>
+  </div>
+  
+  <button onclick="logout()" class="btn-logout">安全退出</button>
+  <div style="height:30px;"></div>
+</div>
+
+<div id="ocrModal" class="hidden modal-overlay">
+  <div class="modal-content">
+    <h3>📷 智能识别</h3>
+    <p style="font-size:13px; color:#666; margin-bottom:10px;">粘贴微信地址文本 (100%准确) 或上传截图：</p>
+    <textarea id="smartPasteInput" rows="4" placeholder="例如：张三 13800000000 北京市朝阳区..." style="width:100%; border:1px solid #ddd; padding:10px; border-radius:8px; margin-bottom:15px;"></textarea>
+    
+    <div style="margin-bottom:15px; background:#f9f9f9; padding:10px; border-radius:8px;">
+        <input type="file" id="imgInput" accept="image/*" style="font-size:12px;">
+    </div>
+    
+    <div id="ocrStatus" style="color:#ff9500; font-size:12px; margin-bottom:10px; font-weight:bold;"></div>
+    
+    <div style="display:flex; gap:10px;">
+      <button onclick="document.getElementById('ocrModal').classList.add('hidden')" style="flex:1; padding:12px; border:none; background:#eee; border-radius:8px; font-weight:600;">取消</button>
+      <button onclick="processSmartInput()" style="flex:1; padding:12px; border:none; background:#007aff; color:#fff; border-radius:8px; font-weight:600;">一键填充</button>
     </div>
   </div>
+</div>
 
 <script>
-  let ME = null;
-  const ADMIN_MAIL = "169351@qq.com";
-
-  // 检查登录
-  window.onload = async () => {
+  let currentUser = null; const MY_ADMIN_EMAIL = "169351@qq.com";
+  
+  // 启动检查
+  (async()=>{
+    if(!window.sb) return;
     const {data:{session}} = await window.sb.auth.getSession();
-    if(session) { ME=session.user; initApp(); }
+    if(session){ currentUser=session.user; showApp(); }
+  })();
+  
+  document.getElementById("loginBtn").onclick=async()=>{
+    const btn = document.getElementById("loginBtn");
+    btn.innerText = "登录中..."; btn.disabled = true;
+    const e=document.getElementById("email").value.trim(), p=document.getElementById("password").value.trim();
+    const{data,error}=await window.sb.auth.signInWithPassword({email:e,password:p});
+    btn.innerText = "进入系统"; btn.disabled = false;
+    if(error) document.getElementById("loginMsg").innerText = "登录失败: " + error.message;
+    else { currentUser=data.user; showApp(); }
   };
 
-  async function doLogin() {
-    const e = document.getElementById("email").value.trim();
-    const p = document.getElementById("pass").value.trim();
-    const {data, error} = await window.sb.auth.signInWithPassword({email:e, password:p});
-    if(error) alert(error.message); else { ME=data.user; initApp(); }
-  }
-
-  function initApp() {
-    document.getElementById("loginArea").classList.add("hidden");
-    document.getElementById("welcomeArea").classList.remove("hidden");
-    document.getElementById("mainArea").classList.remove("hidden");
-    document.getElementById("userEmail").innerText = ME.email;
-    loadList();
-  }
-
-  function goAdmin() {
-    if(ME.email === ADMIN_MAIL) location.href = "admin.html";
-    else alert("你不是管理员");
-  }
-
-  // 核心计算
-  function calc() {
-    const a = Number(document.getElementById("qA").value)||0;
-    const b = Number(document.getElementById("qB").value)||0;
-    const type = document.getElementById("oType").value;
-    const total = a+b;
-    let price = 0;
-    if(total > 0) {
-      if(type === 'retail') price = total===1 ? 89+6 : (total*80 + 6 + (total-1)*3);
-      else price = total*45 + 6 + Math.max(0, total-1)*3;
-    }
-    document.getElementById("showPrice").innerText = price;
-    return price;
-  }
-
-  // 提交
-  async function submitOrder() {
-    const n = document.getElementById("cName").value;
-    const p = document.getElementById("cPhone").value;
-    const a = Number(document.getElementById("qA").value)||0;
-    const b = Number(document.getElementById("qB").value)||0;
-    if(!n || !p) return alert("姓名电话必填");
-    if(a+b <= 0) return alert("数量不能为0");
-
-    let rem = document.getElementById("rem").value;
-    const type = document.getElementById("oType").value;
-    if(type === 'internal') rem = `[老BABY内购] ${rem}`;
-
-    const price = calc();
+  function showApp(){
+    document.getElementById("loginBox").classList.add("hidden"); 
+    document.getElementById("appBox").classList.remove("hidden");
+    loadRankings(); loadMyTodayOrders();
     
+    if(currentUser.email.trim().toLowerCase()===MY_ADMIN_EMAIL){
+      const b=document.createElement("button"); 
+      b.innerText="🔧 进入总控后台"; 
+      b.style.cssText="position:fixed; bottom:20px; right:20px; background:#000; color:#fff; padding:12px 24px; border-radius:30px; border:2px solid #fff; box-shadow:0 4px 15px rgba(0,0,0,0.4); z-index:9999; cursor:pointer; font-weight:bold;";
+      b.onclick=()=>location.href="admin.html"; 
+      document.body.appendChild(b);
+    }
+  }
+
+  function calcCore(qa,qb,type){
+    const tot=qa+qb; if(tot===0)return{t:0,s:0,n:"请选择商品"};
+    let p=0,s=0,n="";
+    if(type==='retail'){ if(tot===1){p=89;s=6;n="单件 (89+6)"}else{p=tot*80;s=6+(tot-1)*3;n=`多件 (${tot}×80 + 运费${s})`} }
+    else{ p=tot*45;s=6+Math.max(0,tot-1)*3;n=`内购 (${tot}×45 + 运费${s})` }
+    return{t:p+s,s:s,n:n};
+  }
+
+  function calcPrice(){
+    const qa=parseInt(document.getElementById("qtyA").value)||0;
+    const qb=parseInt(document.getElementById("qtyB").value)||0;
+    const tp=document.querySelector('input[name="orderType"]:checked').value;
+    const r=calcCore(qa,qb,tp);
+    document.getElementById("finalPrice").innerText=r.t;
+    document.getElementById("priceDetail").innerText=r.n;
+  }
+
+  // ✅ 核心修复：防连点逻辑
+  document.getElementById("submitBtn").onclick = async () => {
+    const btn = document.getElementById("submitBtn");
+    
+    // 1. 验证
+    const n=document.getElementById("custName").value.trim();
+    const p=document.getElementById("custPhone").value.trim();
+    const a=document.getElementById("custAddress").value.trim();
+    const qa=parseInt(document.getElementById("qtyA").value)||0;
+    const qb=parseInt(document.getElementById("qtyB").value)||0;
+    
+    if(!n || !p) return alert("❌ 姓名和电话是必填项！");
+    if((qa+qb)<=0) return alert("❌ 请至少选择一件商品");
+    
+    // 2. 上锁 (防止手抖连点)
+    btn.disabled = true;
+    btn.innerText = "⏳ 正在提交...";
+    
+    const tp = document.querySelector('input[name="orderType"]:checked').value;
+    let rm = document.getElementById("remarks").value.trim();
+    if(tp==='internal') rm = `[老BABY内购] ${rm}`;
+    const pr = calcCore(qa,qb,tp);
+
+    // 3. 提交
     const {error} = await window.sb.from("orders").insert({
-      account: ME.email, customer_name: n, phone: p, address: document.getElementById("cAddr").value,
-      qty_a: a, qty_b: b, total_qty: a+b, total_price: price, shipping: 0,
-      product: `A款:${a}, B款:${b}`, order_type: type, remarks: rem, status: 'pending', item_category: '日用品'
+      account:currentUser.email, customer_name:n, phone:p, address:a, 
+      qty_a:qa, qty_b:qb, total_qty:qa+qb, product:`A款:${qa}, B款:${qb}`, 
+      order_type:tp, total_price:pr.t, shipping:pr.s, remarks:rm, 
+      status:'pending', item_category:'日用品'
     });
 
-    if(error) alert("失败: "+error.message);
-    else { alert("✅ 提交成功"); location.reload(); }
+    // 4. 解锁与反馈
+    if(error) {
+      alert("提交失败: " + error.message);
+      btn.disabled = false;
+      btn.innerText = "提交订单";
+    } else {
+      alert("✅ 订单提交成功！");
+      location.reload(); // 刷新页面重置所有状态
+    }
+  };
+
+  // OCR 逻辑 (带错误处理)
+  function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
+  async function processSmartInput() {
+    const btn = document.querySelector("#ocrModal button:last-child");
+    btn.innerText = "处理中..."; btn.disabled = true;
+
+    let txt = document.getElementById("smartPasteInput").value.trim();
+    const file = document.getElementById("imgInput").files[0];
+    
+    if(file){
+      if(typeof Tesseract === 'undefined') {
+        alert("⚠️ OCR库加载慢，请稍候再试或使用文本粘贴");
+      } else {
+        document.getElementById("ocrStatus").innerText = "⏳ 正在分析图片...";
+        try { const{data:{text}} = await Tesseract.recognize(file,'chi_sim'); txt += " " + text; } 
+        catch(e) { console.log(e); }
+      }
+    }
+    
+    if(!txt) { 
+      btn.innerText = "一键填充"; btn.disabled = false;
+      return alert("请输入内容"); 
+    }
+
+    const ph = txt.match(/1[3-9]\d{9}/)?.[0]||"";
+    let rem = txt.replace(ph,"").replace(/收货人|收件人|电话|手机|地址|：|:/g," ").replace(/\s+/g," ").trim();
+    let nm="", ad=""; const pts=rem.split(" ");
+    for(let p of pts){ if(!nm && p.length>=2 && p.length<=4) nm=p; else ad+=p; }
+    
+    document.getElementById("custName").value = nm;
+    document.getElementById("custPhone").value = ph;
+    document.getElementById("custAddress").value = ad;
+    
+    document.getElementById("ocrModal").classList.add("hidden");
+    document.getElementById("ocrStatus").innerText = "";
+    btn.innerText = "一键填充"; btn.disabled = false;
+    alert("✅ 填充完毕，请核对！");
   }
 
-  // 列表加载
-  async function loadList() {
-    const today = new Date().toISOString().split('T')[0];
-    const {data} = await window.sb.from("orders").select("*").eq("account", ME.email).gte("created_at", today).order("created_at", {ascending:false});
-    
-    const div = document.getElementById("list");
-    div.innerHTML = "";
+  // 辅助加载函数
+  async function loadRankings(){
+    const{data}=await window.sb.from("sales_leaderboard").select("*").limit(10);
+    if(data) document.getElementById("rankList").innerHTML=data.map(i=>`<div style="background:#f0f0f5;padding:6px 12px;border-radius:8px;flex-shrink:0;text-align:center;border:${i.account===currentUser.email?'1px solid #007aff':'none'}"><div>${i.account.split('@')[0]}</div><b>¥${i.total_revenue}</b></div>`).join("");
+  }
+  
+  async function loadMyTodayOrders(){
+    const t=new Date().toISOString().split('T')[0];
+    const{data}=await window.sb.from("orders").select("*").eq("account",currentUser.email).gte("created_at",t).order("created_at",{ascending:false});
+    const list = document.getElementById("todayList");
+    list.innerHTML = "";
     if(data) data.forEach(o => {
-      div.innerHTML += `<div style="border-bottom:1px solid #eee; padding:10px;">
-        <b>${o.customer_name}</b> <span style="float:right; color:#007aff">¥${o.total_price}</span><br>
-        <span style="color:#666; font-size:12px;">${o.product}</span><br>
-        <span style="font-size:12px; color:${o.tracking_number?'green':'orange'}">${o.tracking_number ? '已发货: '+o.tracking_number : '⏳ 待发货'}</span>
+      const track = o.tracking_number 
+        ? `<a href="https://www.baidu.com/s?wd=${o.tracking_number}" target="_blank" class="tracking-link">🚛 ${o.tracking_number}</a>` 
+        : `<span style="color:#ff9500; font-size:12px;">⏳ 待发货</span>`;
+        
+      list.innerHTML += `<div class="today-item">
+        <div>
+          <div style="font-weight:600; font-size:15px;">${o.customer_name}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">${o.product}</div>
+          <div style="margin-top:4px;">${track}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:bold; font-size:16px;">¥${o.total_price}</div>
+        </div>
       </div>`;
     });
   }
 
-  // 智能识别 (即使 Tesseract 挂了也能跑文本正则)
-  async function runSmart() {
-    let txt = document.getElementById("smartText").value;
-    const file = document.getElementById("smartImg").files[0];
-    
-    if(file && typeof Tesseract !== 'undefined') {
-      document.getElementById("ocrLog").innerText = "正在扫描图片...";
-      try {
-        const res = await Tesseract.recognize(file, 'chi_sim');
-        txt += " " + res.data.text;
-      } catch(e) { console.log(e); }
-    }
-    
-    // 正则提取
-    const ph = txt.match(/1[3-9]\d{9}/)?.[0] || "";
-    let clean = txt.replace(ph, "").replace(/电话|手机|收件人|地址|:|：/g, " ").replace(/\s+/g, " ").trim();
-    // 简单猜测：短的是名字，长的是地址
-    let nm = "", ad = "";
-    clean.split(" ").forEach(w => {
-      if(!nm && w.length >= 2 && w.length <= 4) nm = w;
-      else ad += w;
-    });
-
-    document.getElementById("cName").value = nm;
-    document.getElementById("cPhone").value = ph;
-    document.getElementById("cAddr").value = ad;
-    document.getElementById("ocrModal").classList.remove("show");
-    alert("填充完毕，请检查！");
-  }
+  async function logout() { await window.sb.auth.signOut(); location.reload(); }
 </script>
 </body>
 </html>

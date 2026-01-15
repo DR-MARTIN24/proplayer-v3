@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V8.1</title>
+  <title>Pro Player · 总控台 V8.1 (修正版)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
@@ -16,31 +16,27 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
     
-    /* 顶部导航栏 */
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
-    .title-area { display: flex; flex-direction: column; }
     .clock { font-size: 14px; color: #007aff; font-weight: bold; margin-top: 5px; font-family: monospace; }
     
-    /* 统计卡 */
     .stats-box { display: flex; gap: 15px; margin-bottom: 20px; }
     .card { background: #fff; padding: 15px; border-radius: 8px; flex: 1; border-left: 4px solid #007aff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .num { font-size: 24px; font-weight: bold; margin-top: 5px; }
 
-    /* 占比条 */
     .bar-box { background: #fff; padding: 10px; margin-bottom: 20px; border-radius: 8px; }
     .bar-track { display: flex; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; margin-top: 5px; }
     .bar-part { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; transition: width 0.3s; }
 
-    /* 按钮组 */
     .btn-group { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
     button { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; } /* 禁用样式 */
+    
     .btn-blue { background: #007aff; }
     .btn-green { background: #34c759; }
     .btn-orange { background: #ff9500; }
     .btn-red { background: #ff3b30; }
     .btn-gray { background: #eee; color: #333; }
 
-    /* 表格 - 强制显示，去除隐藏属性 */
     .table-container { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 200px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
     th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
@@ -49,22 +45,19 @@
     
     .remark-cell { font-size: 12px; color: #666; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
-    /* 弹窗 */
     .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 1000; }
     .modal.show { display: flex; }
     .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    
-    #loader { text-align: center; padding: 40px; color: #888; font-size: 16px; }
   </style>
 </head>
 
 <body>
 
 <div class="header">
-  <div class="title-area">
-    <span style="font-size: 20px; font-weight: bold;">Pro Player 总控台 V8.1</span>
-    <span id="clock" class="clock">🕒 正在同步时间...</span>
+  <div>
+    <span style="font-size: 20px; font-weight: bold;">Pro Player 总控台 V8.1 (稳定版)</span>
+    <span id="clock" class="clock">🕒 正在同步...</span>
   </div>
   <button class="btn-gray" onclick="location.href='sales.html'">返回销售端</button>
 </div>
@@ -124,7 +117,7 @@
     <label>备注</label><input id="gr">
     <div style="display:flex; gap:10px; margin-top:10px">
       <button class="btn-gray" style="flex:1" onclick="document.getElementById('giftModal').classList.remove('show')">取消</button>
-      <button class="btn-orange" style="flex:1" onclick="submitGift()">确认</button>
+      <button id="giftSubmitBtn" class="btn-orange" style="flex:1" onclick="submitGift()">确认</button>
     </div>
   </div>
 </div>
@@ -132,49 +125,28 @@
 <script>
   let allData = [];
 
-  // 1. 启动时钟 & 加载数据
   window.onload = () => {
-    setInterval(() => {
-      const now = new Date();
-      document.getElementById('clock').innerText = "🕒 " + now.toLocaleString();
-    }, 1000);
+    setInterval(() => document.getElementById('clock').innerText = "🕒 " + new Date().toLocaleTimeString(), 1000);
     loadData();
   };
 
-  // 2. 数据读取 (不设门槛)
   async function loadData() {
-    const tbody = document.getElementById("tbody");
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">正在从数据库拉取数据...</td></tr>`;
-
-    // 简单粗暴，读取所有
     const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
-
-    if (error) {
-      alert("读取失败: " + error.message);
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:red;">读取失败: ${error.message}</td></tr>`;
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">数据库里没有订单 (0条)</td></tr>`;
-      return;
-    }
-
-    allData = data;
-    renderTable(); // 渲染
-    calcStats();   // 统计
+    if (error) return alert("读取失败: " + error.message);
+    
+    allData = data || [];
+    renderTable();
+    calcStats();
   }
 
-  // 3. 强力渲染 (防止一行报错导致全表不显示)
   function renderTable() {
     const tbody = document.getElementById("tbody");
-    tbody.innerHTML = ""; // 清空
+    tbody.innerHTML = "";
+    if (!allData.length) { tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;">暂无数据</td></tr>`; return; }
 
     allData.forEach(r => {
       try {
         const tr = document.createElement("tr");
-        
-        // 安全获取字段 (防止 null 报错)
         const id = (r.id || "").toString().substring(0, 8);
         const time = r.created_at ? new Date(r.created_at).toLocaleString() : "-";
         const account = (r.account || "未知").split("@")[0];
@@ -186,31 +158,19 @@
         const price = Number(r.total_price) || 0;
         let remarks = r.remarks || "";
 
-        // 状态处理
-        const isShipped = !!r.tracking_number;
-        const statusHtml = isShipped 
+        const statusHtml = r.tracking_number 
           ? `<span style="color:green; font-weight:bold;">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank" style="color:green; font-size:12px;">${r.tracking_number}</a></span>`
           : `<span style="color:#ff9500;">待发货</span>`;
 
-        // 备注高亮
-        if (remarks.includes("内购") || remarks.includes("赠送")) {
-          remarks = `<span style="color:green; font-weight:bold;">${remarks}</span>`;
-        }
-
-        // 价格样式
-        const priceHtml = (price === 0) 
-          ? `<span style="color:#ff9500; font-weight:bold;">赠送</span>` 
-          : `¥${price}`;
+        if (remarks.includes("内购") || remarks.includes("赠送")) remarks = `<span style="color:green; font-weight:bold;">${remarks}</span>`;
+        const priceHtml = (price === 0) ? `<span style="color:#ff9500; font-weight:bold;">赠送</span>` : `¥${price}`;
 
         tr.innerHTML = `
           <td><input type="checkbox" class="chk" value="${r.id}"></td>
           <td style="font-family:monospace; color:#666;">${id}</td>
           <td style="font-size:12px;">${time}</td>
           <td>${account}</td>
-          <td>
-            <div style="font-weight:bold;">${name}</div>
-            <div style="font-size:12px; color:#666;">${phone}</div>
-          </td>
+          <td><div style="font-weight:bold;">${name}</div><div style="font-size:12px; color:#666;">${phone}</div></td>
           <td>ProPlayer鼠标垫</td>
           <td style="font-size:12px; color:#666;">A:${qa} / B:${qb}</td>
           <td style="font-weight:bold; text-align:center;">${total}</td>
@@ -219,55 +179,43 @@
           <td class="remark-cell" title="${r.remarks}">${remarks}</td>
         `;
         tbody.appendChild(tr);
-      } catch (err) {
-        console.error("某一行渲染出错，已跳过:", err);
-      }
+      } catch (e) { console.error(e); }
     });
   }
 
-  // 4. 统计逻辑
   function calcStats() {
     const todayStr = new Date().toISOString().split("T")[0];
     let n=0, m=0, p=0, sa=0, sb=0;
-    
     allData.forEach(r => {
-      // 容错统计
-      if (r.created_at && r.created_at.includes(todayStr)) {
-        n++;
-        m += (Number(r.total_price) || 0);
-      }
+      if (r.created_at && r.created_at.includes(todayStr)) { n++; m += (Number(r.total_price) || 0); }
       if (!r.tracking_number) p++;
-      sa += (Number(r.qty_a) || 0);
-      sb += (Number(r.qty_b) || 0);
+      sa += (Number(r.qty_a) || 0); sb += (Number(r.qty_b) || 0);
     });
-
     document.getElementById("vOrder").innerText = n;
     document.getElementById("vMoney").innerText = "¥" + m;
     document.getElementById("vPending").innerText = p;
-
-    // 占比条
     const t = sa + sb;
     if (t > 0) {
       const pa = Math.round((sa / t) * 100);
-      document.getElementById("barA").style.width = pa + "%";
-      document.getElementById("barA").innerText = `A: ${pa}% (${sa})`;
-      document.getElementById("barB").style.width = (100 - pa) + "%";
-      document.getElementById("barB").innerText = `B: ${100 - pa}% (${sb})`;
-    } else {
-      document.getElementById("barA").innerText = "A: 0";
-      document.getElementById("barB").innerText = "B: 0";
+      document.getElementById("barA").style.width = pa + "%"; document.getElementById("barA").innerText = `A: ${pa}% (${sa})`;
+      document.getElementById("barB").style.width = (100 - pa) + "%"; document.getElementById("barB").innerText = `B: ${100 - pa}% (${sb})`;
     }
   }
 
-  // === 功能区 ===
   function openGift() { document.getElementById('giftModal').classList.add('show'); }
   
+  // ✅ 核心修复：防连点
   async function submitGift() {
+    const btn = document.getElementById("giftSubmitBtn");
     const n = document.getElementById('gn').value;
     const qa = Number(document.getElementById('gqa').value);
     const qb = Number(document.getElementById('gqb').value);
     
     if(!n || (qa+qb)<=0) return alert("请填写姓名和数量");
+    
+    // 1. 禁用按钮
+    btn.disabled = true;
+    btn.innerText = "处理中...";
     
     const { error } = await window.sb.from("orders").insert({
       account: "admin_gift",
@@ -282,60 +230,55 @@
       item_category: "日用品"
     });
     
+    // 2. 恢复按钮
+    btn.disabled = false;
+    btn.innerText = "确认";
+    
     if(error) alert(error.message);
     else { alert("✅ 录入成功"); document.getElementById('giftModal').classList.remove('show'); loadData(); }
   }
 
   function checkAll(el) { document.querySelectorAll(".chk").forEach(c => c.checked = el.checked); }
-  
   async function delSel() {
     const ids = Array.from(document.querySelectorAll(".chk:checked")).map(c => c.value);
-    if(!ids.length) return alert("没选怎么删？");
-    if(confirm(`⚠️ 确定删除这 ${ids.length} 条数据吗？`)) {
-      await window.sb.from("orders").delete().in("id", ids);
-      loadData();
-    }
+    if(!ids.length) return alert("没选");
+    if(confirm(`⚠️ 确定删除？`)) { await window.sb.from("orders").delete().in("id", ids); loadData(); }
   }
 
-  // === Excel 导出 (保留完美版) ===
+  // 导出逻辑
   function exportCainiao() {
     if(!allData.length) return alert("无数据");
-    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
-    const d = [["","收件信息","","","物品信息","","","备注","","回填区"], h];
-    
+    const headers = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
+    const data = [["","收件信息","","","物品信息","","","备注","","回填区"], headers];
     allData.forEach(r => {
       let desc = "ProPlayer鼠标垫";
       if(r.qty_a) desc += ` (A款粗*${r.qty_a})`;
       if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
-      d.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
+      data.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, desc, r.remarks||"", "", ""]);
     });
-
-    if(typeof XLSX === 'undefined') return alert("Excel 库加载慢，请稍后再试");
-    const ws = XLSX.utils.aoa_to_sheet(d);
-    
-    // 样式
+    const ws = XLSX.utils.aoa_to_sheet(data);
     ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:25}];
     const range = XLSX.utils.decode_range(ws['!ref']);
     for(let R=0; R<=range.e.r; ++R) {
       for(let C=0; C<=range.e.c; ++C) {
-        const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
-        if(!cell) continue;
-        cell.s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
-        if(R<2) { cell.s.fill={fgColor:{rgb:"CCFFCC"}}; cell.s.font={bold:true}; }
-        if(R>=2 && C===7) cell.s.font={color:{rgb:"FF0000"},bold:true};
-        if(R>=2 && C===9) cell.s.fill={fgColor:{rgb:"FFFFCC"}};
+        const addr = XLSX.utils.encode_cell({r:R, c:C});
+        if(!ws[addr]) continue;
+        ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
+        if(R < 2) { ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; ws[addr].s.font = { bold: true }; }
+        if(R >= 2 && C === 7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
+        if(R >= 2 && C === 9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
       }
     }
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, "菜鸟发货单.xlsx");
+    XLSX.writeFile(wb, `菜鸟发货单_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   function exportFinance() {
     const body = [["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
-    allData.forEach(r => body.push([new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发货":"未发货", r.remarks, r.tracking_number]));
+    allData.forEach(r => body.push([new Date(r.created_at).toLocaleString(), r.account, r.customer_name, r.phone, r.address, r.qty_a, r.qty_b, r.total_qty, r.shipping, r.total_price, r.tracking_number?"已发":"未发", r.remarks, r.tracking_number]));
     const ws = XLSX.utils.aoa_to_sheet(body);
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "财务");
-    XLSX.writeFile(wb, "财务单.xlsx");
+    XLSX.writeFile(wb, `财务_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   async function doImport(el) {
