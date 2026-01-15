@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V7.4</title>
+  <title>Pro Player · 总控台 V7.5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
@@ -25,6 +25,12 @@
     .stat-val { font-size: 28px; font-weight: bold; margin-top: 5px; color: #333; }
     .stat-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
 
+    /* A/B 款占比图 */
+    .ratio-bar-container { width: 100%; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; display: flex; margin-bottom: 20px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); position: relative; }
+    .ratio-a { background: #007aff; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; transition: width 0.5s; }
+    .ratio-b { background: #ff9500; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; transition: width 0.5s; }
+    .ratio-legend { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 5px; }
+
     .toolbar { background: #fff; padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     button { padding: 10px 18px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; color:#fff; font-size: 13px; display: flex; align-items: center; gap: 5px; }
     button:active { transform: scale(0.98); }
@@ -32,8 +38,8 @@
     .btn-export { background: #007aff; }
     .btn-finance { background: #34c759; }
     .btn-import { background: #5856d6; }
-    .btn-gift { background: #ff9500; } /* 赠送单橙色 */
-    .btn-delete { background: #ff3b30; } /* 删除红 */
+    .btn-gift { background: #ff9500; }
+    .btn-delete { background: #ff3b30; }
     .btn-logout { background: #666; }
     .btn-refresh { background: #eee; color: #333; margin-left: auto; }
 
@@ -44,7 +50,7 @@
     tr:hover { background: #f9f9f9; }
     
     .remark-cell { color: #666; font-size: 13px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .remark-vip { color: #34c759; font-weight: bold; } /* 内购绿 */
+    .remark-vip { color: #34c759; font-weight: bold; }
     
     .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
     .st-shipped { background: #e8f5e9; color: #2e7d32; }
@@ -53,12 +59,11 @@
     .tracking-link { color: inherit; text-decoration: none; border-bottom: 1px dashed currentColor; }
     .tracking-link:hover { color: #007aff; border-bottom-style: solid; }
 
-    /* 模态框 */
     .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 99; display: flex; align-items: center; justify-content: center; }
     .modal-content { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
     .input-group { margin-bottom: 12px; }
     .input-group label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; }
-    .input-group input, .input-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+    .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
     
     .hidden { display: none; }
     #fileInput { display: none; }
@@ -71,7 +76,7 @@
 <body>
 
 <h2>
-  <span>Pro Player 总控台 V7.4</span>
+  <span>Pro Player 总控台 V7.5</span>
   <button class="btn-logout" onclick="logout()">安全退出</button>
 </h2>
 
@@ -87,6 +92,17 @@
   <div class="stat-card" style="border-left-color: #ff9500;">
     <div class="stat-label">待发货</div>
     <div class="stat-val" id="sPending">0</div>
+  </div>
+</div>
+
+<div style="background:#fff; padding:15px; border-radius:8px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+  <div class="ratio-legend">
+    <span style="color:#007aff; font-weight:bold;">● A款 (粗面)</span>
+    <span style="color:#ff9500; font-weight:bold;">● B款 (细面)</span>
+  </div>
+  <div class="ratio-bar-container">
+    <div id="barA" class="ratio-a" style="width: 50%">A: 0%</div>
+    <div id="barB" class="ratio-b" style="width: 50%">B: 0%</div>
   </div>
 </div>
 
@@ -117,7 +133,7 @@
         <th>销售员</th>
         <th>收件信息</th>
         <th>产品详情</th>
-        <th>A/B</th>
+        <th>A/B明细</th>
         <th>总数</th>
         <th>总价</th>
         <th>状态</th>
@@ -133,28 +149,16 @@
     <h3>🎁 新增赠送单 (0元)</h3>
     <div class="input-group">
       <label>赠送类型</label>
-      <select id="giftType" style="width:100%; padding:8px;">
-        <option value="活动赠送">🎉 活动赠送</option>
-        <option value="选手推广">🎮 职业选手推广</option>
-      </select>
+      <select id="giftType"><option value="活动赠送">🎉 活动赠送</option><option value="选手推广">🎮 职业选手推广</option></select>
     </div>
-    <div class="input-group">
-      <label>收件人姓名</label><input id="gName">
-    </div>
-    <div class="input-group">
-      <label>电话</label><input id="gPhone">
-    </div>
-    <div class="input-group">
-      <label>地址</label><textarea id="gAddr" rows="2"></textarea>
-    </div>
+    <div class="input-group"><label>收件人姓名</label><input id="gName"></div>
+    <div class="input-group"><label>电话</label><input id="gPhone"></div>
+    <div class="input-group"><label>地址</label><textarea id="gAddr" rows="2"></textarea></div>
     <div style="display:flex; gap:10px;">
       <div class="input-group" style="flex:1"><label>A款数量</label><input type="number" id="gQa" value="0"></div>
       <div class="input-group" style="flex:1"><label>B款数量</label><input type="number" id="gQb" value="0"></div>
     </div>
-    <div class="input-group">
-      <label>备注</label><input id="gRemarks" placeholder="选填...">
-    </div>
-    
+    <div class="input-group"><label>备注</label><input id="gRemarks" placeholder="选填..."></div>
     <div style="display:flex; gap:10px; margin-top:15px;">
       <button onclick="document.getElementById('giftModal').classList.add('hidden')" style="flex:1; background:#eee; color:#333;">取消</button>
       <button onclick="submitGift()" style="flex:1; background:#ff9500; color:#fff;">确认赠送</button>
@@ -162,10 +166,7 @@
   </div>
 </div>
 
-<footer>
-  Pro Player Admin System V7.4 &copy; 2026<br>
-  Powered by Mars-老刘 & AI
-</footer>
+<footer>Pro Player Admin System V7.5 &copy; 2026<br>Powered by Mars-老刘 & AI</footer>
 
 <script>
   let allOrders = [];
@@ -175,9 +176,7 @@
     const { data: { user } } = await window.sb.auth.getUser();
     if (!user) { alert("请先在 Sales 页面登录"); location.href = "sales.html"; return; }
     if (user.email.trim().toLowerCase() !== MY_ADMIN_EMAIL.trim().toLowerCase()) {
-      alert("⚠️ 权限验证失败：您不是管理员！");
-      location.href = "sales.html";
-      return;
+      alert("⚠️ 权限验证失败"); location.href = "sales.html"; return;
     }
     loadData();
   })();
@@ -189,12 +188,11 @@
       const { data, error } = await window.sb.from("orders").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       allOrders = data || [];
-      if (allOrders.length === 0) {
-        document.getElementById("tableBody").innerHTML = `<tr><td colspan="11" style="text-align:center; padding:30px; color:#999;">暂无数据</td></tr>`;
-      } else {
-        renderTable(allOrders);
-      }
+      
+      // T1修复: 强制渲染，即使数据有空字段
+      renderTable(allOrders);
       calcStats(allOrders);
+      
       document.getElementById("loader").style.display = "none";
       document.getElementById("dataTable").style.display = "table";
     } catch (err) {
@@ -205,19 +203,20 @@
   function renderTable(data) {
     const tbody = document.getElementById("tableBody");
     tbody.innerHTML = "";
-    
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:30px; color:#999;">暂无数据</td></tr>`;
+      return;
+    }
+
     data.forEach(row => {
       try {
         const tr = document.createElement("tr");
         const shortId = (row.id || "????").substring(0, 8);
-        
-        // T2: 百度物流链接
         const isShipped = !!row.tracking_number;
         const statusHtml = isShipped
           ? `<span class="status-badge st-shipped">已发货<br><a href="https://www.baidu.com/s?wd=${row.tracking_number}" target="_blank" class="tracking-link">${row.tracking_number}</a></span>`
           : `<span class="status-badge st-pending">待发货</span>`;
 
-        // T1: 内购绿色显示
         let remarkHtml = row.remarks || '-';
         if (remarkHtml.includes("老BABY内购") || remarkHtml.includes("赠送")) {
           remarkHtml = `<span class="remark-vip">${remarkHtml}</span>`;
@@ -231,20 +230,59 @@
           <td style="font-family:monospace; color:#888;">${shortId}</td>
           <td>${new Date(row.created_at).toLocaleString()}</td>
           <td>${(row.account||"").split('@')[0]}</td>
-          <td><strong>${row.customer_name}</strong><br><small>${row.phone}</small></td>
-          <td>ProPlayer鼠标垫</td>
+          <td><strong>${row.customer_name || "未知"}</strong><br><small>${row.phone || "-"}</small></td>
+          <td>${row.product || "-"}</td>
           <td style="font-size:12px; color:#666;">A:${qtyA} / B:${qtyB}</td>
-          <td style="font-weight:bold;">${row.total_qty}</td>
+          <td style="font-weight:bold;">${row.total_qty || 0}</td>
           <td style="color:${row.total_price==0 ? '#ff9500' : '#007aff'};">${row.total_price==0 ? '赠送' : '¥'+row.total_price}</td>
           <td>${statusHtml}</td>
           <td class="remark-cell" title="${row.remarks}">${remarkHtml}</td>
         `;
         tbody.appendChild(tr);
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("渲染错误", e); }
     });
   }
 
-  // T3: 赠送单逻辑
+  // T1: 统计逻辑 + 条状图更新
+  function calcStats(data) {
+    const now = new Date();
+    const localTodayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
+    let todayCount = 0, todayMoney = 0, pendingCount = 0;
+    
+    // A/B 统计
+    let totalA = 0, totalB = 0;
+
+    data.forEach(o => {
+      if (o.created_at && o.created_at.indexOf(localTodayStr) > -1) {
+        todayCount++;
+        todayMoney += (o.total_price || 0);
+      }
+      if (!o.tracking_number) pendingCount++;
+      
+      totalA += (o.qty_a || 0);
+      totalB += (o.qty_b || 0);
+    });
+
+    document.getElementById("sOrders").innerText = todayCount;
+    document.getElementById("sMoney").innerText = "¥" + todayMoney.toFixed(2);
+    document.getElementById("sPending").innerText = pendingCount;
+
+    // 更新 A/B 占比条
+    const grandTotal = totalA + totalB;
+    if (grandTotal > 0) {
+      const pctA = Math.round((totalA / grandTotal) * 100);
+      const pctB = 100 - pctA;
+      document.getElementById("barA").style.width = pctA + "%";
+      document.getElementById("barA").innerText = `A款: ${pctA}% (${totalA})`;
+      document.getElementById("barB").style.width = pctB + "%";
+      document.getElementById("barB").innerText = `B款: ${pctB}% (${totalB})`;
+    } else {
+      document.getElementById("barA").style.width = "50%"; document.getElementById("barA").innerText = "无数据";
+      document.getElementById("barB").style.width = "50%"; document.getElementById("barB").innerText = "无数据";
+    }
+  }
+
+  // 赠送单
   function openGiftModal() { document.getElementById('giftModal').classList.remove('hidden'); }
   async function submitGift() {
     const name = document.getElementById('gName').value;
@@ -252,73 +290,36 @@
     const addr = document.getElementById('gAddr').value;
     const qa = parseInt(document.getElementById('gQa').value) || 0;
     const qb = parseInt(document.getElementById('gQb').value) || 0;
-    const type = document.getElementById('giftType').value; // 活动 or 选手
+    const type = document.getElementById('giftType').value; 
     const remarkInput = document.getElementById('gRemarks').value;
 
     if(!name || (qa+qb)<=0) return alert("姓名和数量必填");
-
-    const fullRemark = `[${type}] ${remarkInput}`; // 备注里自动加上类型
+    const fullRemark = `[${type}] ${remarkInput}`;
 
     const { error } = await window.sb.from("orders").insert({
-      account: "admin_gift", // 标记为管理员赠送
-      customer_name: name, phone: phone, address: addr,
-      qty_a: qa, qty_b: qb, total_qty: qa+qb,
-      product: `A款:${qa}, B款:${qb}`,
-      order_type: 'gift',
-      total_price: 0, shipping: 0, // 价格为0
-      remarks: fullRemark,
-      status: 'pending', item_category: '日用品'
+      account: "admin_gift", customer_name: name, phone: phone, address: addr,
+      qty_a: qa, qty_b: qb, total_qty: qa+qb, product: `A款:${qa}, B款:${qb}`,
+      order_type: 'gift', total_price: 0, shipping: 0, remarks: fullRemark, status: 'pending', item_category: '日用品'
     });
-
     if(error) alert(error.message);
-    else {
-      alert("🎁 赠送单录入成功！");
-      document.getElementById('giftModal').classList.add('hidden');
-      loadData();
-    }
+    else { alert("🎁 赠送单录入成功！"); document.getElementById('giftModal').classList.add('hidden'); loadData(); }
   }
 
-  // T4: 批量删除
-  function toggleAll(source) {
-    document.querySelectorAll('.row-checkbox').forEach(c => c.checked = source.checked);
-  }
+  // 批量删除
+  function toggleAll(source) { document.querySelectorAll('.row-checkbox').forEach(c => c.checked = source.checked); }
   async function deleteSelected() {
     const ids = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(c => c.value);
     if(ids.length === 0) return alert("请先勾选要删除的订单");
-    
-    if(!confirm(`⚠️ 高能预警！\n\n确定要永久删除这 ${ids.length} 条数据吗？\n删除后不可恢复！`)) return;
-
+    if(!confirm(`⚠️ 确定要永久删除这 ${ids.length} 条数据吗？`)) return;
     const { error } = await window.sb.from('orders').delete().in('id', ids);
-    if(error) alert("删除失败: " + error.message);
-    else {
-      alert("✅ 已删除");
-      loadData();
-    }
+    if(error) alert("删除失败: " + error.message); else { alert("✅ 已删除"); loadData(); }
   }
 
-  // 统计
-  function calcStats(data) {
-    const now = new Date();
-    const localTodayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
-    let todayCount = 0, todayMoney = 0, pendingCount = 0;
-    data.forEach(o => {
-      if (o.created_at && o.created_at.indexOf(localTodayStr) > -1) {
-        todayCount++;
-        todayMoney += (o.total_price || 0);
-      }
-      if (!o.tracking_number) pendingCount++;
-    });
-    document.getElementById("sOrders").innerText = todayCount;
-    document.getElementById("sMoney").innerText = "¥" + todayMoney.toFixed(2);
-    document.getElementById("sPending").innerText = pendingCount;
-  }
-
-  // 导出逻辑 (保持 V7.3 修复)
+  // 导出逻辑 (菜鸟 + 财务)
   function exportCainiao() {
     if(!allOrders.length) return alert("无数据");
     const header = ["编号\n（单次最多5000包裹）", "收件人姓名", "收件人联系方式", "收件地址", "物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）", "物品数量", "物品详情", "备注信息", "外平台单号(抖音必填)\n", "【回填】运单号 (供应链填这里)"];
     const wsData = [["", "收件信息", "", "", "物品信息", "", "", "备注", "单号", "回填区"], header];
-    
     allOrders.forEach(o => {
       const qa = Number(o.qty_a)||0, qb = Number(o.qty_b)||0;
       let detailStr = "ProPlayer鼠标垫";
@@ -352,6 +353,7 @@
     XLSX.writeFile(wb, `销售财务表_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
+  // 导入回填
   async function handleImport(input) {
     const file = input.files[0]; if(!file) return;
     const reader = new FileReader();
