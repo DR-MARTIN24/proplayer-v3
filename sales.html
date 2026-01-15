@@ -2,16 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售系统 V7.0 (正式版)</title>
+  <title>Pro Player · 销售系统 V7.4</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    // ==========================================
-    // ✅ 已更新为正确的 Key
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
-    // ==========================================
     
     if (typeof supabase !== 'undefined') {
       window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -37,7 +34,6 @@
     .qty-label { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
     .qty-input { width: 80px; text-align: center; font-weight: bold; background: #f5f5f7; border: none; padding: 8px; border-radius: 6px; }
 
-    /* iPhone 风格分段选择器 */
     .type-selector { display: flex; background: #e5e5ea; padding: 3px; border-radius: 10px; margin-bottom: 15px; }
     .type-option { flex: 1; text-align: center; padding: 10px; font-size: 14px; font-weight: 600; color: #666; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; user-select: none; }
     .type-selector input[type="radio"] { display: none; }
@@ -58,12 +54,15 @@
     
     .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 99; display: flex; align-items: center; justify-content: center; }
     .modal-content { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+    
+    /* 运单链接样式 */
+    .tracking-link { color: #34c759; text-decoration: none; font-weight: bold; border-bottom: 1px dashed #34c759; }
   </style>
 </head>
 
 <body>
 
-<h2>🚀 Pro Player 销售 V7.0</h2>
+<h2>🚀 Pro Player 销售 V7.4</h2>
 
 <div id="loginBox" class="card">
   <h3>员工登录</h3>
@@ -161,9 +160,8 @@
 
 <script>
   let currentUser = null;
-  const MY_ADMIN_EMAIL = "169351@qq.com"; // 你的管理员邮箱
+  const MY_ADMIN_EMAIL = "169351@qq.com";
 
-  // 初始化
   (async () => {
     if(!window.sb) return;
     const { data: { session } } = await window.sb.auth.getSession();
@@ -190,7 +188,6 @@
     loadRankings();
     loadMyTodayOrders();
 
-    // === 管理员快捷通道 (只有你能看到) ===
     if (currentUser.email.trim().toLowerCase() === MY_ADMIN_EMAIL.trim().toLowerCase()) {
       const btn = document.createElement("button");
       btn.innerText = "🔧 进入总控后台";
@@ -238,12 +235,19 @@
     const qb = parseInt(document.getElementById("qtyB").value) || 0;
     let remarks = document.getElementById("remarks").value.trim();
     const type = document.querySelector('input[name="orderType"]:checked').value;
+    
     if (!name || !phone) return alert("❌ 姓名和电话是必填项！");
     if ((qa + qb) <= 0) return alert("请至少选择一件商品");
     if (!address) {
       if(!confirm("⚠️ 警告：地址未填写！\n\n点击【确定】继续提交（系统标记未填地址）\n点击【取消】返回填写")) return;
       remarks = `[系统:客户未填地址] ${remarks}`;
     }
+
+    // T1: 内购自动加备注
+    if (type === 'internal') {
+      remarks = `[老BABY内购] ${remarks}`;
+    }
+
     const priceData = calculateCore(qa, qb, type);
     const btn = document.getElementById("submitBtn"); btn.classList.add("loading");
     const { error } = await window.sb.from("orders").insert({
@@ -263,13 +267,30 @@
   async function loadMyTodayOrders() {
     const today = new Date().toISOString().split('T')[0];
     const { data } = await window.sb.from("orders").select("*").eq("account", currentUser.email).gte("created_at", today).order("created_at", { ascending: false });
-    if(data) document.getElementById("todayList").innerHTML = data.map(o => `<li style="background:#fff; padding:12px; margin-bottom:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #f0f0f0;"><div><div style="font-weight:600; font-size:15px;">${o.customer_name}</div><div style="font-size:12px;color:#888; margin-top:2px;">${o.product}</div><div style="font-size:11px; margin-top:4px; color:${o.tracking_number?'#34c759':'#ff9500'}">${o.tracking_number?'🚛 已发货: '+o.tracking_number:'⏳ 待发货'}</div></div><div><div style="font-weight:bold; text-align:right; font-size:16px;">¥${o.total_price}</div><button class="btn-edit" style="margin-top:5px;" onclick="openEdit('${o.id}', '${o.customer_name}', '${o.phone}', '${o.address||''}', ${o.qty_a}, ${o.qty_b}, '${o.remarks||''}')">✏️ 修改</button></div></li>`).join("");
+    if(data) document.getElementById("todayList").innerHTML = data.map(o => {
+      // T2: 物流单号超链接
+      const trackHtml = o.tracking_number 
+        ? `<a href="https://www.baidu.com/s?wd=${o.tracking_number}" target="_blank" class="tracking-link">🚛 已发货: ${o.tracking_number}</a>` 
+        : `<span style="color:#ff9500">⏳ 待发货</span>`;
+
+      return `<li style="background:#fff; padding:12px; margin-bottom:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #f0f0f0;">
+          <div>
+            <div style="font-weight:600; font-size:15px;">${o.customer_name}</div>
+            <div style="font-size:12px;color:#888; margin-top:2px;">${o.product}</div>
+            <div style="font-size:11px; margin-top:4px;">${trackHtml}</div>
+          </div>
+          <div>
+            <div style="font-weight:bold; text-align:right; font-size:16px;">¥${o.total_price}</div>
+            <button class="btn-edit" style="margin-top:5px;" onclick="openEdit('${o.id}', '${o.customer_name}', '${o.phone}', '${o.address||''}', ${o.qty_a}, ${o.qty_b}, '${o.remarks||''}')">✏️ 修改</button>
+          </div>
+        </li>`;
+    }).join("");
   }
 
+  // 简化版修改逻辑 (略去重复，保持功能)
   let currentEditId = null, originalRemarks = "";
   window.openEdit = (id, n, p, a, qa, qb, r) => { currentEditId=id; originalRemarks=r; document.getElementById("editId").value=id; document.getElementById("editName").value=n; document.getElementById("editPhone").value=p; document.getElementById("editAddress").value=a.replace(/\[系统:客户未填地址\]\s?/,""); document.getElementById("editQtyA").value=qa; document.getElementById("editQtyB").value=qb; calcPrice('edit'); document.getElementById("editModal").classList.remove("hidden"); };
   window.closeEdit = () => document.getElementById("editModal").classList.add("hidden");
-  
   window.saveEdit = async () => {
     const name = document.getElementById("editName").value;
     const phone = document.getElementById("editPhone").value;
