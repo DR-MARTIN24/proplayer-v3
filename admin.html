@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控 V9.1</title>
+  <title>Pro Player · 总控 V9.2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
@@ -15,13 +15,13 @@
   </script>
 
   <style>
+    /* 统一字体，杜绝宋体 */
     body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Roboto, sans-serif; padding: 20px; background: #f5f7fa; padding-bottom:100px; }
     
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
     .clock { font-size: 14px; color: #007aff; font-weight: bold; margin-top: 5px; font-family: monospace; }
     .version-tag { font-size: 12px; color: #999; margin-left: 5px; font-weight: 400; }
     
-    /* 3. 统计卡单位 */
     .stats-box { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
     .card { background: #fff; padding: 15px; border-radius: 12px; flex: 1; min-width: 120px; border-left: 4px solid #007aff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .num { font-size: 24px; font-weight: 800; margin-top: 5px; }
@@ -34,7 +34,7 @@
     .btn-group { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
     button { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; color: #fff; font-weight: bold; font-size: 13px; font-family: inherit; transition: opacity 0.2s; }
     button:active { transform: scale(0.98); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; background: #ccc !important; }
     
     .btn-b { background: #007aff; } .btn-g { background: #34c759; } .btn-o { background: #ff9500; } .btn-r { background: #ff3b30; } .btn-gy { background: #666; } .btn-bk { background: #000; }
 
@@ -65,8 +65,8 @@
 
 <div class="header">
   <div>
-    <span style="font-size: 20px; font-weight: 800;">Pro Player 鼠标垫销售统计系统 <span class="version-tag">V9.1</span></span>
-    <span id="clock" class="clock">🕒 ...</span>
+    <span style="font-size: 20px; font-weight: 800;">Pro Player 鼠标垫销售统计系统 <span class="version-tag">V9.2</span></span>
+    <span id="clock" class="clock">🕒 校验身份...</span>
   </div>
   <button class="btn-gy" onclick="location.href='sales.html'">返回销售</button>
 </div>
@@ -113,7 +113,7 @@
 </div>
 
 <footer>
-  Pro Player System V9.1<br>
+  Pro Player System V9.2 (Security Enhanced)<br>
   制作人：Mars-老刘 & AI
 </footer>
 
@@ -164,16 +164,33 @@
   let DB = [];
   const IS_MOBILE = window.innerWidth < 768;
 
-  window.onload = () => {
+  // 🔒 核心逻辑：安全启动
+  window.onload = async () => {
+    // 启动时钟
     setInterval(() => document.getElementById('clock').innerText = "🕒 " + new Date().toLocaleTimeString(), 1000);
+    
+    // 1. 检查身份 (Gatekeeper)
+    const { data: { session } } = await window.sb.auth.getSession();
+    if (!session) {
+      document.body.innerHTML = "<h2 style='text-align:center;margin-top:50px'>⚠️ 访问拒绝</h2><p style='text-align:center'>您未登录，无法访问数据。<br><a href='sales.html'>点击前往登录</a></p>";
+      alert("⚠️ 安全警告：\n您尚未登录，系统拒绝访问数据库！\n\n请先在 Sales 页面登录员工账号。");
+      window.location.href = "sales.html";
+      return;
+    }
+
+    // 2. 身份验证通过，允许加载
     loadData();
     setInterval(loadData, 300000);
   };
 
-  // 2. 排序反转：按 seq_id 正序 (No.1 在最上面)
+  // 排序：seq_id 升序 (No.1 在最上面，符合 Excel 习惯)
   async function loadData() {
     const { data, error } = await window.sb.from("orders").select("*").order("seq_id", {ascending:true});
-    if (error) return alert("Error: " + error.message);
+    if (error) {
+      // 如果因为 RLS 被拒，这里也会报错
+      console.error(error);
+      return alert("读取失败 (可能权限不足): " + error.message);
+    }
     DB = data || [];
     render();
     stats();
@@ -250,13 +267,12 @@
     }
   }
 
-  // 1. 修改运单号
   function openEdit(r) {
     document.getElementById("eId").value = r.id;
     document.getElementById("eName").value = r.customer_name;
     document.getElementById("ePhone").value = r.phone;
     document.getElementById("eAddr").value = r.address;
-    document.getElementById("eTrack").value = r.tracking_number || ""; // 允许修改运单号
+    document.getElementById("eTrack").value = r.tracking_number || "";
     document.getElementById("eQa").value = r.qty_a;
     document.getElementById("eQb").value = r.qty_b;
     document.getElementById("eRem").value = r.remarks || "";
@@ -271,7 +287,6 @@
     const oldR = document.getElementById("eRem").value;
     const newR = `${oldR} | [Admin改:${new Date().toLocaleTimeString()}]`;
     
-    // 如果有运单号，状态自动变 shipped，否则 pending
     const status = track ? 'shipped' : 'pending';
 
     const {error} = await window.sb.from("orders").update({
@@ -320,7 +335,6 @@
     if(error) alert(error.message); else { alert("成功"); document.getElementById("giftModal").classList.remove("show"); loadData(); }
   }
 
-  // 4. 菜鸟导出优化 (剔除地址中的电话姓名)
   function expCainiao() {
     if(!DB.length) return alert("无数据");
     
@@ -339,7 +353,6 @@
       let desc = `ProPlayer鼠标垫`;
       if(r.qty_a) desc += ` (A款粗*${r.qty_a})`; if(r.qty_b) desc += ` (B款细*${r.qty_b})`;
       
-      // 清洗地址：去掉姓名和电话
       let cleanAddr = r.address || "";
       cleanAddr = cleanAddr.replace(r.customer_name, "").replace(r.phone, "").replace(/收件人|电话|：|:/g, "").trim();
 
@@ -358,16 +371,11 @@
       for(let C=0; C<=range.e.c; ++C) {
         const addr = XLSX.utils.encode_cell({r:R, c:C});
         if(!ws[addr]) continue;
-        
         ws[addr].s = { border: { top:{style:"thin"}, bottom:{style:"thin"}, left:{style:"thin"}, right:{style:"thin"} }, alignment: { vertical: "center", wrapText: true } };
-        
         if(R < 2) { ws[addr].s.fill = { fgColor: { rgb: "CCFFCC" } }; ws[addr].s.font = { bold: true }; }
         
-        if(isNewRow) {
-          ws[addr].s.font = { color: { rgb: "0000FF" }, bold: true }; 
-        } else if (onlyNew && R >= 2) {
-          ws[addr].s.font = { color: { rgb: "999999" } }; 
-        }
+        if(isNewRow) ws[addr].s.font = { color: { rgb: "0000FF" }, bold: true };
+        else if (onlyNew && R >= 2) ws[addr].s.font = { color: { rgb: "999999" } };
         
         if(R>=2 && C===7) ws[addr].s.font = { color: { rgb: "FF0000" }, bold: true };
         if(R>=2 && C===9) ws[addr].s.fill = { fgColor: { rgb: "FFFFCC" } };
