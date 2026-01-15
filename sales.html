@@ -2,13 +2,17 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 销售系统 V6.0</title>
+  <title>Pro Player · 销售系统 V7.0 (正式版)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
+    // ==========================================
+    // ✅ 已更新为正确的 Key
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_xCKbicWQaYM1knmkOqH-QA_3l5Xr96T"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
+    // ==========================================
+    
     if (typeof supabase !== 'undefined') {
       window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
@@ -33,6 +37,7 @@
     .qty-label { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
     .qty-input { width: 80px; text-align: center; font-weight: bold; background: #f5f5f7; border: none; padding: 8px; border-radius: 6px; }
 
+    /* iPhone 风格分段选择器 */
     .type-selector { display: flex; background: #e5e5ea; padding: 3px; border-radius: 10px; margin-bottom: 15px; }
     .type-option { flex: 1; text-align: center; padding: 10px; font-size: 14px; font-weight: 600; color: #666; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; user-select: none; }
     .type-selector input[type="radio"] { display: none; }
@@ -58,7 +63,7 @@
 
 <body>
 
-<h2>🚀 Pro Player 销售 V6.0</h2>
+<h2>🚀 Pro Player 销售 V7.0</h2>
 
 <div id="loginBox" class="card">
   <h3>员工登录</h3>
@@ -156,7 +161,7 @@
 
 <script>
   let currentUser = null;
-  const MY_ADMIN_EMAIL = "169351@qq.com"; // 管理员邮箱
+  const MY_ADMIN_EMAIL = "169351@qq.com"; // 你的管理员邮箱
 
   // 初始化
   (async () => {
@@ -185,7 +190,7 @@
     loadRankings();
     loadMyTodayOrders();
 
-    // === 核心逻辑：如果是管理员，显示传送门按钮 ===
+    // === 管理员快捷通道 (只有你能看到) ===
     if (currentUser.email.trim().toLowerCase() === MY_ADMIN_EMAIL.trim().toLowerCase()) {
       const btn = document.createElement("button");
       btn.innerText = "🔧 进入总控后台";
@@ -264,7 +269,6 @@
   let currentEditId = null, originalRemarks = "";
   window.openEdit = (id, n, p, a, qa, qb, r) => { currentEditId=id; originalRemarks=r; document.getElementById("editId").value=id; document.getElementById("editName").value=n; document.getElementById("editPhone").value=p; document.getElementById("editAddress").value=a.replace(/\[系统:客户未填地址\]\s?/,""); document.getElementById("editQtyA").value=qa; document.getElementById("editQtyB").value=qb; calcPrice('edit'); document.getElementById("editModal").classList.remove("hidden"); };
   window.closeEdit = () => document.getElementById("editModal").classList.add("hidden");
-  window.saveEdit = async () => { /* ... (保持原逻辑) ... */ }; // (为节省篇幅，这里复用上一个版本的修改逻辑，下面完整版会自动包含)
   
   window.saveEdit = async () => {
     const name = document.getElementById("editName").value;
