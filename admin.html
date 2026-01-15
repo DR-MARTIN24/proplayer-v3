@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V7.8 (救生圈版)</title>
+  <title>Pro Player · 总控台 V7.9 (无门槛直通版)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
-    // ✅ 这里的 Key 绝对正确
+    // ✅ Key 绝对正确
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
     
@@ -18,7 +18,7 @@
 
   <style>
     body { font-family: -apple-system, sans-serif; padding: 20px; background: #f5f7fa; }
-    h2 { border-bottom: 2px solid #333; padding-bottom: 10px; }
+    h2 { border-bottom: 2px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
     
     /* 顶部统计卡 */
     .stats-box { display: flex; gap: 15px; margin-bottom: 20px; }
@@ -40,12 +40,13 @@
     .btn-gray { background: #eee; color: #333; }
 
     /* 表格 */
-    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 13px; }
+    .table-container { overflow-x: auto; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
     th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
-    th { background: #fafafa; }
+    th { background: #fafafa; white-space: nowrap; }
     
     /* 弹窗 */
-    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; }
+    .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 1000; }
     .modal.show { display: flex; }
     .modal-box { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
@@ -54,7 +55,10 @@
 
 <body>
 
-<h2>Pro Player 总控台 V7.8</h2>
+<h2>
+  <span>Pro Player 总控台 V7.9</span>
+  <button class="btn-gray" onclick="window.location.href='sales.html'">返回销售端</button>
+</h2>
 
 <div class="stats-box">
   <div class="card"><div>今日订单</div><div class="num" id="vOrder">0</div></div>
@@ -85,7 +89,7 @@
 
 <div id="statusMsg" style="text-align:center; padding:20px; color:#888;">正在读取数据库...</div>
 
-<div style="overflow-x:auto">
+<div class="table-container">
   <table id="mainTable" style="display:none">
     <thead>
       <tr>
@@ -118,16 +122,9 @@
 
 <script>
   let allData = [];
-  const MY_MAIL = "169351@qq.com";
 
-  // 1. 启动检查
+  // 1. 无门槛启动 (移除了所有登录检查)
   window.onload = async () => {
-    const { data: { user } } = await window.sb.auth.getUser();
-    if (!user || user.email !== MY_MAIL) {
-      alert("请先登录或权限不足");
-      window.location.href = "sales.html";
-      return;
-    }
     fetchData();
   };
 
@@ -135,16 +132,16 @@
   async function fetchData() {
     document.getElementById("statusMsg").innerText = "正在连接 Supabase...";
     
-    // 直接读，不带 filter，看看到底有没有
+    // 简单粗暴读取
     const { data, error } = await window.sb.from("orders").select("*").order("created_at", {ascending:false});
 
     if (error) {
-      document.getElementById("statusMsg").innerHTML = `<b style="color:red">读取失败: ${error.message}</b><br>请检查 RLS 权限`;
+      document.getElementById("statusMsg").innerHTML = `<b style="color:red">读取失败: ${error.message}</b><br>请检查 SQL Editor 里的 RLS 设置`;
       return;
     }
 
     if (!data || data.length === 0) {
-      document.getElementById("statusMsg").innerText = "✅ 数据库连接成功，但表是空的 (0 条数据)。";
+      document.getElementById("statusMsg").innerText = "✅ 连接成功，但没有订单数据 (0条)";
       return;
     }
 
@@ -160,29 +157,37 @@
     const box = document.getElementById("tbody");
     box.innerHTML = "";
     allData.forEach(r => {
-      const tr = document.createElement("tr");
-      const isShip = !!r.tracking_number;
-      const st = isShip ? `<span style="color:green;font-weight:bold">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank">${r.tracking_number}</a></span>` : `<span style="color:orange">待发货</span>`;
-      
-      let rem = r.remarks || "";
-      if (rem.includes("内购") || rem.includes("赠送")) rem = `<b style="color:green">${rem}</b>`;
-      
-      const qa = r.qty_a||0; const qb = r.qty_b||0;
+      try {
+        const tr = document.createElement("tr");
+        const isShip = !!r.tracking_number;
+        const st = isShip ? `<span style="color:green;font-weight:bold">已发货<br><a href="https://www.baidu.com/s?wd=${r.tracking_number}" target="_blank">${r.tracking_number}</a></span>` : `<span style="color:orange">待发货</span>`;
+        
+        let rem = r.remarks || "";
+        if (rem.includes("内购") || rem.includes("赠送")) rem = `<b style="color:green">${rem}</b>`;
+        
+        // 容错处理：如果字段是 null，给个默认值 0
+        const qa = r.qty_a || 0; 
+        const qb = r.qty_b || 0;
+        const tq = (r.total_qty !== undefined && r.total_qty !== null) ? r.total_qty : (qa+qb);
+        const tp = (r.total_price !== undefined && r.total_price !== null) ? r.total_price : 0;
 
-      tr.innerHTML = `
-        <td><input type="checkbox" class="chk" value="${r.id}"></td>
-        <td>${(r.id||"").substr(0,8)}</td>
-        <td>${new Date(r.created_at).toLocaleString()}</td>
-        <td>${(r.account||"").split("@")[0]}</td>
-        <td><b>${r.customer_name}</b><br>${r.phone}</td>
-        <td>鼠标垫</td>
-        <td>A:${qa} / B:${qb}</td>
-        <td><b>${r.total_qty}</b></td>
-        <td>${r.total_price}</td>
-        <td>${st}</td>
-        <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${r.remarks}">${rem}</td>
-      `;
-      box.appendChild(tr);
+        tr.innerHTML = `
+          <td><input type="checkbox" class="chk" value="${r.id}"></td>
+          <td>${(r.id||"").substr(0,8)}</td>
+          <td>${new Date(r.created_at).toLocaleString()}</td>
+          <td>${(r.account||"").split("@")[0]}</td>
+          <td><b>${r.customer_name}</b><br>${r.phone}</td>
+          <td>ProPlayer鼠标垫</td>
+          <td>A:${qa} / B:${qb}</td>
+          <td><b>${tq}</b></td>
+          <td>${tp}</td>
+          <td>${st}</td>
+          <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${rem}">${rem}</td>
+        `;
+        box.appendChild(tr);
+      } catch (err) {
+        console.error("渲染某行失败", err);
+      }
     });
   }
 
@@ -192,10 +197,15 @@
     let tNum=0, tMoney=0, pending=0, sa=0, sb=0;
     
     allData.forEach(r => {
-      if (r.created_at.includes(today)) { tNum++; tMoney += (r.total_price||0); }
+      // 容错
+      const price = r.total_price || 0;
+      const qa = r.qty_a || 0;
+      const qb = r.qty_b || 0;
+
+      if (r.created_at && r.created_at.includes(today)) { tNum++; tMoney += price; }
       if (!r.tracking_number) pending++;
-      sa += (r.qty_a||0);
-      sb += (r.qty_b||0);
+      sa += qa;
+      sb += qb;
     });
 
     document.getElementById("vOrder").innerText = tNum;
@@ -208,6 +218,9 @@
       const pb = 100 - pa;
       document.getElementById("barA").style.width = pa+"%"; document.getElementById("barA").innerText = `A: ${pa}% (${sa})`;
       document.getElementById("barB").style.width = pb+"%"; document.getElementById("barB").innerText = `B: ${pb}% (${sb})`;
+    } else {
+       document.getElementById("barA").style.width = "50%"; document.getElementById("barA").innerText = "A: 0";
+       document.getElementById("barB").style.width = "50%"; document.getElementById("barB").innerText = "B: 0";
     }
   }
 
@@ -243,18 +256,19 @@
     }
   }
 
-  // 导出 (保留核心)
+  // 导出 (菜鸟 + 财务)
   function exportCainiao() {
     if(!allData.length) return;
-    const head = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类","物品数量","物品详情","备注信息","外平台单号","【回填】运单号"];
+    const head = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
     const body = [["","收件信息","","","物品信息","","","备注","","回填区"], head];
     allData.forEach(r => {
       let d = "ProPlayer鼠标垫";
-      if(r.qty_a) d += ` (A款粗*${r.qty_a})`; if(r.qty_b) d += ` (B款细*${r.qty_b})`;
+      const qa = r.qty_a || 0; const qb = r.qty_b || 0;
+      if(qa) d += ` (A款粗*${qa})`; if(qb) d += ` (B款细*${qb})`;
       body.push([r.id, r.customer_name, r.phone, r.address, "日用品", r.total_qty, d, r.remarks, "", ""]);
     });
     const ws = XLSX.utils.aoa_to_sheet(body);
-    // 简单样式
+    // 样式略
     ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:30},{wch:20},{wch:15},{wch:20}];
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, "菜鸟发货单.xlsx");
