@@ -2,12 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Pro Player · 总控台 V7.6</title>
+  <title>Pro Player · 总控台 V7.7</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
 
   <script>
+    // ✅ 你的专属 Key
     const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
     
@@ -25,7 +26,7 @@
     .stat-val { font-size: 28px; font-weight: bold; margin-top: 5px; color: #333; }
     .stat-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* === T1: A/B 占比条 === */
+    /* A/B 占比条 */
     .ratio-box { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .ratio-header { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 600; }
     .ratio-bar { display: flex; height: 24px; border-radius: 12px; overflow: hidden; background: #f0f0f0; }
@@ -42,6 +43,7 @@
     .btn-gift { background: #ff9500; }
     .btn-delete { background: #ff3b30; }
     .btn-refresh { background: #eee; color: #333; margin-left: auto; }
+    .btn-debug { background: #333; color: #0f0; font-family: monospace; }
 
     .table-box { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; min-height: 200px; }
     table { width: 100%; border-collapse: collapse; min-width: 900px; }
@@ -57,22 +59,30 @@
     .tracking-link { color: inherit; text-decoration: none; border-bottom: 1px dashed currentColor; }
     
     #loader { text-align: center; padding: 40px; color: #999; }
-    .hidden { display: none; }
+    #debugBox { display: none; background: #000; color: #0f0; padding: 15px; margin: 20px 0; border-radius: 8px; font-family: monospace; white-space: pre-wrap; font-size: 12px; max-height: 300px; overflow: auto; }
     
-    /* 模态框 */
-    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 99; display: flex; align-items: center; justify-content: center; }
+    /* 修复弹窗无法关闭的 BUG */
+    .hidden { display: none !important; }
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; }
     .modal-content { background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
+    .input-group { margin-bottom:10px; }
     .input-group label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; }
-    .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; margin-bottom:10px; }
+    .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+    #fileInput { display: none; }
   </style>
 </head>
 
 <body>
 
 <h2>
-  <span>Pro Player 总控台 V7.6</span>
-  <button class="btn-delete" style="background:#666" onclick="logout()">退出</button>
+  <span>Pro Player 总控台 V7.7</span>
+  <div>
+    <button class="btn-debug" onclick="toggleDebug()">👀 显微镜 (调试)</button>
+    <button class="btn-delete" style="background:#666; display:inline-flex;" onclick="logout()">退出</button>
+  </div>
 </h2>
+
+<div id="debugBox">Waiting for data...</div>
 
 <div class="dashboard">
   <div class="stat-card">
@@ -110,7 +120,7 @@
 
   <div style="width:1px; height:24px; background:#ddd; margin:0 5px;"></div>
   <button class="btn-import" onclick="document.getElementById('fileInput').click()">📥 导入发货回执</button>
-  <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="handleImport(this)">
+  <input type="file" id="fileInput" accept=".xlsx" onchange="handleImport(this)">
   
   <button class="btn-refresh" onclick="loadData()">🔄 刷新数据</button>
 </div>
@@ -153,13 +163,13 @@
       <label>备注</label><input id="gRem">
     </div>
     <div style="display:flex; gap:10px">
-      <button onclick="document.getElementById('giftModal').classList.add('hidden')" style="background:#eee; color:#333; flex:1">取消</button>
-      <button onclick="submitGift()" style="background:#ff9500; color:#fff; flex:1">确认</button>
+      <button onclick="closeGiftModal()" style="background:#eee; color:#333; flex:1; border:none; padding:10px; border-radius:6px;">取消</button>
+      <button onclick="submitGift()" style="background:#ff9500; color:#fff; flex:1; border:none; padding:10px; border-radius:6px;">确认</button>
     </div>
   </div>
 </div>
 
-<footer>Pro Player Admin System V7.6 &copy; 2026</footer>
+<footer>Pro Player Admin System V7.7 &copy; 2026</footer>
 
 <script>
   let allOrders = [];
@@ -169,7 +179,7 @@
     const { data: { user } } = await window.sb.auth.getUser();
     if (!user) { alert("请先登录"); location.href = "sales.html"; return; }
     if (user.email.trim().toLowerCase() !== MY_ADMIN_EMAIL.trim().toLowerCase()) {
-      alert("权限验证失败"); location.href = "sales.html"; return;
+      alert("⚠️ 权限验证失败：非管理员"); location.href = "sales.html"; return;
     }
     loadData();
   })();
@@ -179,17 +189,29 @@
       document.getElementById("loader").style.display = "block";
       document.getElementById("dataTable").style.display = "none";
       
-      const { data, error } = await window.sb.from("orders").select("*").order("created_at", { ascending: false });
+      const { data, error } = await window.sb
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       
       allOrders = data || [];
-      renderTable(allOrders); // 强力渲染
-      calcStats(allOrders);   // 计算 A/B 占比
+      
+      // === 调试输出 ===
+      const debugText = `读取到 ${allOrders.length} 条数据。\n第一条数据样本:\n` + JSON.stringify(allOrders[0], null, 2);
+      document.getElementById("debugBox").innerText = debugText;
+      // ==============
+
+      renderTable(allOrders);
+      calcStats(allOrders);
       
       document.getElementById("loader").style.display = "none";
       document.getElementById("dataTable").style.display = "table";
+
     } catch (err) {
-      document.getElementById("loader").innerHTML = `<span style="color:red">加载失败: ${err.message}</span>`;
+      document.getElementById("loader").innerHTML = `<span style="color:red">❌ 加载失败: ${err.message}</span>`;
+      document.getElementById("debugBox").innerText = "ERROR: " + err.message;
     }
   }
 
@@ -203,9 +225,9 @@
     }
 
     data.forEach(row => {
+      // 强力容错：只要有 ID 就渲染，字段缺失显示 "-"
       try {
         const tr = document.createElement("tr");
-        // 容错处理：防止空值导致崩溃
         const shortId = (row.id || "NULL").substring(0, 8);
         const dateStr = row.created_at ? new Date(row.created_at).toLocaleString() : '-';
         const isShipped = !!row.tracking_number;
@@ -216,21 +238,29 @@
         let remarkHtml = row.remarks || '-';
         if(remarkHtml.includes("内购") || remarkHtml.includes("赠送")) remarkHtml = `<span class="remark-vip">${remarkHtml}</span>`;
 
+        // 安全获取数字
+        const qtyA = (typeof row.qty_a === 'number') ? row.qty_a : 0;
+        const qtyB = (typeof row.qty_b === 'number') ? row.qty_b : 0;
+        const totalQ = (typeof row.total_qty === 'number') ? row.total_qty : (qtyA+qtyB);
+        const price = (typeof row.total_price === 'number') ? row.total_price : 0;
+
         tr.innerHTML = `
           <td><input type="checkbox" class="row-checkbox" value="${row.id}"></td>
           <td style="font-family:monospace; color:#888">${shortId}</td>
           <td>${dateStr}</td>
           <td>${(row.account||"").split('@')[0]}</td>
-          <td><strong>${row.customer_name||"未知"}</strong><br><small>${row.phone||"-"}</small></td>
+          <td><strong>${row.customer_name || "未知"}</strong><br><small>${row.phone || "-"}</small></td>
           <td>ProPlayer鼠标垫</td>
-          <td style="font-size:12px; color:#666">A:${row.qty_a||0} / B:${row.qty_b||0}</td>
-          <td style="font-weight:bold">${row.total_qty||0}</td>
-          <td style="color:${row.total_price==0 ? '#ff9500':'#007aff'}">${row.total_price==0 ? '赠送':'¥'+row.total_price}</td>
+          <td style="font-size:12px; color:#666">A:${qtyA} / B:${qtyB}</td>
+          <td style="font-weight:bold">${totalQ}</td>
+          <td style="color:${price==0 ? '#ff9500':'#007aff'}">${price==0 ? '赠送':'¥'+price}</td>
           <td>${statusHtml}</td>
           <td class="remark-cell" title="${row.remarks}">${remarkHtml}</td>
         `;
         tbody.appendChild(tr);
-      } catch (e) { console.error("Row render error", e); }
+      } catch (e) {
+        console.error("Row Render Error:", e);
+      }
     });
   }
 
@@ -260,13 +290,24 @@
       document.getElementById("barB").style.width = pb + "%";
       document.getElementById("barB").innerText = `B款: ${pb}% (${totalB})`;
     } else {
-      document.getElementById("barA").innerText = "无数据";
-      document.getElementById("barB").innerText = "无数据";
+      document.getElementById("barA").style.width = "50%"; document.getElementById("barA").innerText = "A: 0";
+      document.getElementById("barB").style.width = "50%"; document.getElementById("barB").innerText = "B: 0";
     }
   }
 
-  // 赠送/删除/导出/导入 (保持 V7.4 逻辑)
+  // 辅助功能
+  function toggleDebug() {
+    const box = document.getElementById("debugBox");
+    box.style.display = (box.style.display === "block") ? "none" : "block";
+  }
+
+  // 修复：显式定义关闭函数
+  function closeGiftModal() {
+    document.getElementById('giftModal').classList.add('hidden');
+  }
+
   function openGiftModal(){ document.getElementById('giftModal').classList.remove('hidden'); }
+  
   async function submitGift(){
     const n=document.getElementById('gName').value, p=document.getElementById('gPhone').value, a=document.getElementById('gAddr').value;
     const qa=parseInt(document.getElementById('gQa').value)||0, qb=parseInt(document.getElementById('gQb').value)||0;
@@ -275,7 +316,7 @@
       account: "admin_gift", customer_name: n, phone: p, address: a, qty_a: qa, qty_b: qb, total_qty: qa+qb, product: `A款:${qa}, B款:${qb}`,
       total_price: 0, shipping: 0, remarks: `[${document.getElementById('gType').value}] ${document.getElementById('gRem').value}`, status: 'pending', item_category: '日用品'
     });
-    if(error) alert(error.message); else { alert("赠送成功"); document.getElementById('giftModal').classList.add('hidden'); loadData(); }
+    if(error) alert(error.message); else { alert("赠送成功"); closeGiftModal(); loadData(); }
   }
 
   function toggleAll(src){ document.querySelectorAll('.row-checkbox').forEach(c=>c.checked=src.checked); }
@@ -288,10 +329,10 @@
     }
   }
 
-  // 导出函数 (V7.4版 完美保留)
+  // 导出逻辑 (菜鸟 + 财务)
   function exportCainiao(){
     if(!allOrders.length) return alert("无数据");
-    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类","物品数量","物品详情","备注信息","外平台单号","【回填】运单号"];
+    const h = ["编号\n（单次最多5000包裹）","收件人姓名","收件人联系方式","收件地址","物品类（在以下6类中选择：日用品、食品、文件、衣物、数码产品、其他）","物品数量","物品详情","备注信息","外平台单号(抖音必填)\n","【回填】运单号 (供应链填这里)"];
     const d = [["","收件信息","","","物品信息","","","备注","","回填区"], h];
     allOrders.forEach(o=>{
       let desc = "ProPlayer鼠标垫";
@@ -299,15 +340,50 @@
       d.push([o.id, o.customer_name, o.phone, o.address, "日用品", o.total_qty, desc, o.remarks||"", "", ""]);
     });
     const ws=XLSX.utils.aoa_to_sheet(d);
-    // 样式略... (保持 V7.4)
+    ws['!cols'] = [{wch:30},{wch:10},{wch:15},{wch:40},{wch:10},{wch:8},{wch:35},{wch:20},{wch:15},{wch:25}];
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for(let R=0; R<=range.e.r; ++R) {
+      for(let C=0; C<=range.e.c; ++C) {
+        const cell = ws[XLSX.utils.encode_cell({r:R, c:C})];
+        if(!cell) continue;
+        cell.s = { border:{top:{style:"thin"},bottom:{style:"thin"},left:{style:"thin"},right:{style:"thin"}}, alignment:{vertical:"center",wrapText:true} };
+        if(R<2) { cell.s.fill={fgColor:{rgb:"CCFFCC"}}; cell.s.font={bold:true}; }
+        if(R>=2 && C===7) cell.s.font={color:{rgb:"FF0000"},bold:true};
+        if(R>=2 && C===9) cell.s.fill={fgColor:{rgb:"FFFFCC"}};
+      }
+    }
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Sheet1"); XLSX.writeFile(wb, `菜鸟发货_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
   function exportFinance(){
-    const d=[["时间","销售","姓名","电话","地址","A款","B款","总数","运费","总价","状态","备注","运单"]];
+    const d=[["时间","销售","姓名","电话","地址","A款粗","B款细","总数","运费","总价","状态","备注","运单"]];
     allOrders.forEach(o=>d.push([new Date(o.created_at).toLocaleString(),o.account,o.customer_name,o.phone,o.address,o.qty_a,o.qty_b,o.total_qty,o.shipping,o.total_price,o.tracking_number?"已发货":"未发货",o.remarks,o.tracking_number]));
     const ws=XLSX.utils.aoa_to_sheet(d); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"财务"); XLSX.writeFile(wb, `财务_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
-  async function handleImport(inp){ /* V7.3 逻辑略 */ }
+
+  async function handleImport(inp){
+    const file = inp.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, {type: 'array'});
+      const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {range:1});
+      let count = 0;
+      for(let row of json) {
+        let orderId = null, trackNo = null;
+        for(let key in row) {
+          if(key.includes("编号")) orderId = row[key];
+          if(key.includes("【回填】") || key.includes("运单号")) trackNo = row[key];
+        }
+        if(orderId && trackNo) {
+          const { error } = await window.sb.from('orders').update({ tracking_number: trackNo, status: 'shipped' }).eq('id', orderId);
+          if(!error) count++;
+        }
+      }
+      alert(`✅ 更新了 ${count} 条`); inp.value = ""; loadData();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
   async function logout(){ if(confirm("退出?")){ await window.sb.auth.signOut(); location.href="sales.html"; } }
 </script>
 </body>
