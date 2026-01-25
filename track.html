@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pro Player · 物流查询</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  
+  <!-- 核心数据库连接库 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    // ✅ 继承自 V9.1/V9.2 的稳定配置
+    const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+  <style>
+    /* iOS 风格统一 UI */
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f2f2f7; color: #1c1c1e; }
+    
+    .header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+    .logo { width: 60px; height: 60px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
+    h2 { margin: 0; font-weight: 800; font-size: 22px; color: #333; }
+    p { color: #8e8e93; font-size: 13px; margin-top: 5px; }
+
+    .card { background: #fff; padding: 24px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); margin-bottom: 20px; }
+    
+    .search-box { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
+    .input-group { flex: 1; }
+    label { display: block; font-size: 12px; color: #8e8e93; margin-bottom: 5px; font-weight: 600; text-align: center; }
+    
+    input { 
+      width: 100%; padding: 14px; border: 1px solid #e5e5ea; border-radius: 12px; 
+      font-size: 20px; font-weight: bold; text-align: center; box-sizing: border-box; 
+      background: #f9f9f9; -webkit-appearance: none; letter-spacing: 2px;
+    }
+    input:focus { border-color: #007aff; background: #fff; outline: none; }
+
+    .btn-main { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; transition: transform 0.1s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+    .btn-main:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-main:disabled { background: #d1d1d6; color: #fff; box-shadow: none; }
+
+    /* 结果列表样式 */
+    .result-item { border-bottom: 1px dashed #e5e5ea; padding: 15px 0; animation: fadeIn 0.5s ease; }
+    .result-item:last-child { border-bottom: none; }
+    
+    .res-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .res-name { font-weight: 700; font-size: 16px; }
+    .res-date { font-size: 12px; color: #999; }
+    
+    .res-detail { font-size: 14px; color: #666; margin-bottom: 10px; background: #f5f5f7; padding: 8px; border-radius: 8px; }
+    
+    .status-box { display: flex; align-items: center; justify-content: space-between; }
+    .status-tag { font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 6px; }
+    .st-pending { background: #fff3cd; color: #856404; }
+    .st-shipped { background: #d4edda; color: #155724; }
+    
+    .track-btn { font-size: 13px; color: #007aff; text-decoration: none; font-weight: bold; border: 1px solid #007aff; padding: 4px 12px; border-radius: 15px; }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .hidden { display: none; }
+    .footer { text-align: center; font-size: 11px; color: #ccc; margin-top: 40px; }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <img src="https://img.icons8.com/color/96/mouse-pad.png" class="logo" alt="Logo">
+  <h2>Pro Player 物流查询</h2>
+  <p>自助查询 · 实时追踪</p>
+</div>
+
+<div class="card">
+  <div class="search-box">
+    <div class="input-group" style="flex: 0.6;">
+      <label>手机前3位</label>
+      <input type="tel" id="prefix" maxlength="3" placeholder="138">
+    </div>
+    <div style="font-weight:bold; color:#ccc; margin-top: 15px;">••••</div>
+    <div class="input-group">
+      <label>手机后4位</label>
+      <input type="tel" id="suffix" maxlength="4" placeholder="1234">
+    </div>
+  </div>
+  
+  <button id="searchBtn" class="btn-main" onclick="searchOrder()">🔍 立即查询</button>
+</div>
+
+<div id="resultBox" class="card hidden">
+  <h3 style="margin:0 0 15px 0; font-size:16px; border-bottom:2px solid #f2f2f7; padding-bottom:10px;">📦 查询结果</h3>
+  <div id="resultList"></div>
+</div>
+
+<div class="footer">
+  Pro Player System V1.0<br>
+  Powered by Mars-老刘 & AI
+</div>
+
+<script>
+  // 核心查询逻辑
+  async function searchOrder() {
+    const pre = document.getElementById("prefix").value.trim();
+    const suf = document.getElementById("suffix").value.trim();
+    const btn = document.getElementById("searchBtn");
+    const resBox = document.getElementById("resultBox");
+    const list = document.getElementById("resultList");
+
+    // 1. 校验输入
+    if (pre.length !== 3 || suf.length !== 4) {
+      alert("❌ 请完整填写手机号的前3位和后4位");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "⏳ 正在查找...";
+    resBox.classList.add("hidden");
+    list.innerHTML = "";
+
+    // 2. 数据库模糊匹配 (Like Query)
+    // 逻辑：查找 phone 字段长得像 "138%1234" 的数据
+    const searchPattern = `${pre}%${suf}`;
+
+    const { data, error } = await window.sb
+      .from("orders")
+      .select("*")
+      .ilike("phone", searchPattern) // ilike 忽略大小写，支持模糊匹配
+      .order("created_at", { ascending: false });
+
+    btn.disabled = false;
+    btn.innerText = "🔍 立即查询";
+
+    if (error) {
+      alert("系统繁忙，请稍后再试");
+      console.error(error);
+      return;
+    }
+
+    // 3. 渲染结果
+    if (!data || data.length === 0) {
+      alert("⚠️ 未找到相关订单\n\n请检查手机号是否输入正确，\n或联系客服确认是否下单。");
+      return;
+    }
+
+    resBox.classList.remove("hidden");
+
+    data.forEach(order => {
+      // 状态判断
+      const isShipped = !!order.tracking_number;
+      
+      // 物流状态UI
+      let statusBadge = isShipped 
+        ? `<span class="status-tag st-shipped">已发货</span>` 
+        : `<span class="status-tag st-pending">备货中</span>`;
+      
+      // 按钮逻辑：只有发货了才显示跳转按钮
+      let actionBtn = isShipped
+        ? `<a href="https://www.baidu.com/s?wd=${order.tracking_number}" target="_blank" class="track-btn">查看物流 ></a>`
+        : `<span style="font-size:12px; color:#999">等待揽收</span>`;
+
+      // 隐去中间名字保护隐私
+      const safeName = order.customer_name.length > 1 
+        ? order.customer_name[0] + "*" + (order.customer_name.length>2 ? order.customer_name.slice(-1) : "")
+        : order.customer_name;
+
+      const dateStr = new Date(order.created_at).toLocaleDateString();
+
+      const html = `
+        <div class="result-item">
+          <div class="res-header">
+            <span class="res-name">${safeName} (${pre}****${suf})</span>
+            <span class="res-date">${dateStr}</span>
+          </div>
+          <div class="res-detail">
+            商品：${order.product}<br>
+            数量：${order.total_qty} 张
+          </div>
+          <div class="status-box">
+            ${statusBadge}
+            ${actionBtn}
+          </div>
+        </div>
+      `;
+      list.innerHTML += html;
+    });
+  }
+</script>
+
+</body>
+</html>
