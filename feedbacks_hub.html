@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pro Player · 用户反馈中心</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; padding: 20px; max-width: 600px; margin: auto; background: #f2f2f7; color: #333; padding-bottom: 60px; }
+    
+    .header { text-align: center; margin: 30px 0; }
+    .logo { width: 70px; height: 70px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 10px; }
+    h2 { margin: 0; font-weight: 800; font-size: 22px; color: #1c1c1e; }
+    p { color: #8e8e93; font-size: 13px; margin-top: 6px; }
+
+    .card { background: #fff; padding: 24px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
+    
+    .input-group { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 700; }
+    input, textarea, select { 
+      width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; 
+      font-size: 15px; box-sizing: border-box; background: #f9f9f9; -webkit-appearance: none; font-family: inherit;
+    }
+    input:focus, textarea:focus { border-color: #007aff; background: #fff; outline: none; }
+
+    /* 多平台列表 */
+    .social-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .social-select { flex: 1; }
+    .social-input { flex: 2; }
+    .btn-remove { width: 40px; background: #ff3b30; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .btn-add { width: 100%; padding: 10px; border: 1px dashed #007aff; color: #007aff; background: #f0f7ff; border-radius: 10px; cursor: pointer; font-weight: 600; margin-top: 5px; }
+
+    /* 优缺点框 */
+    .pros-box { border: 2px solid #34c759; background: #f0f9f4; }
+    .cons-box { border: 2px solid #ff9500; background: #fff8f0; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 5px; }
+    .badge-green { background: #34c759; color: #fff; }
+    .badge-orange { background: #ff9500; color: #fff; }
+
+    .upload-box { 
+      border: 2px dashed #ddd; border-radius: 12px; padding: 30px; text-align: center; 
+      background: #fafafa; cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    #previewImg { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; margin-top: 10px; }
+
+    /* === 核心优化：超明显实心蓝勾选框 === */
+    .agreement { 
+      display: flex; gap: 15px; align-items: flex-start; 
+      background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 25px; 
+      border: 1px solid #e5e5ea; cursor: pointer; transition: 0.2s;
+    }
+    .agreement:active { background: #f2f2f7; }
+
+    /* 隐藏原生 checkbox */
+    .agreement input[type="checkbox"] { 
+      appearance: none; -webkit-appearance: none;
+      width: 26px; height: 26px; flex-shrink: 0; margin-top: 2px;
+      border: 2px solid #ccc; border-radius: 6px; background: #fff;
+      display: flex; align-items: center; justify-content: center; transition: 0.2s;
+    }
+    
+    /* 选中状态：实心蓝背景 + 白色对号 */
+    .agreement input[type="checkbox"]:checked {
+      background-color: #007aff; border-color: #007aff;
+    }
+    .agreement input[type="checkbox"]:checked::after {
+      content: '✔'; font-size: 16px; color: #fff; font-weight: bold;
+    }
+
+    .agreement-text { font-size: 13px; color: #555; line-height: 1.6; text-align: justify; }
+    .highlight { color: #007aff; font-weight: bold; }
+
+    .btn-submit { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+    .btn-submit:disabled { background: #d1d1d6; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
+
+    .hidden { display: none; }
+    .footer { text-align: center; font-size: 11px; color: #ccc; margin-top: 30px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <img src="https://img.icons8.com/color/96/mouse-pad.png" class="logo">
+  <h2>Pro Player 用户反馈中心</h2>
+  <p>您的每一个观点，都是我们进化的动力<br>
+     <span style="color:#007aff; font-weight:bold;">提示：使用相同手机号提交可覆盖更新资料</span>
+  </p>
+</div>
+
+<div id="successPage" class="card hidden" style="text-align:center; padding:50px 20px;">
+  <div style="font-size:50px;">🎉</div>
+  <h2 style="margin:15px 0;">提交成功</h2>
+  <p>您的反馈已加密存储。<br>感谢您对 Pro Player 的支持！</p>
+  <button onclick="location.reload()" style="margin-top:20px; background:#f2f2f7; color:#333; border:none; padding:10px 20px; border-radius:8px;">返回</button>
+</div>
+
+<div id="formPage" class="card">
+  <!-- 1. 身份信息 -->
+  <div class="input-group">
+    <label>登录手机号 (唯一身份ID) <span style="color:red">*</span></label>
+    <input type="tel" id="phone" maxlength="11" placeholder="用于后续修改/覆盖资料，请务必填写真实号码">
+  </div>
+  
+  <div class="input-group">
+    <label>您的称呼 / ID <span style="color:red">*</span></label>
+    <input type="text" id="userName" placeholder="例如：Alex 或 微信昵称">
+  </div>
+
+  <!-- 2. 多平台链接 -->
+  <div class="input-group">
+    <label>社交媒体发布信息 (支持添加多个)</label>
+    <div id="socialList"></div>
+    <button class="btn-add" onclick="addSocialRow()">+ 添加一个平台</button>
+  </div>
+
+  <!-- 3. 原始文案搬运 -->
+  <div class="input-group">
+    <label>📋 社交媒体原始文案 (搬运)</label>
+    <textarea id="rawText" rows="3" placeholder="在此粘贴您发布的朋友圈文案、小红书长文等..."></textarea>
+  </div>
+
+  <!-- 4. 优缺点分流 -->
+  <div class="input-group">
+    <div class="badge badge-green">优点 / 爽点</div>
+    <textarea id="pros" class="pros-box" rows="2" placeholder="觉得哪里好？(滑度、做工、包装等)"></textarea>
+  </div>
+
+  <div class="input-group">
+    <div class="badge badge-orange">缺点 / 建议</div>
+    <textarea id="cons" class="cons-box" rows="2" placeholder="哪里需要改进？请直言不讳"></textarea>
+  </div>
+
+  <!-- 5. 截图上传 -->
+  <div class="input-group">
+    <label>发布截图 (必填) <span style="color:red">*</span></label>
+    <div class="upload-box" onclick="document.getElementById('fileIn').click()">
+      <div id="uploadPlaceholder">📷 点击上传图片</div>
+      <img id="previewImg">
+    </div>
+    <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(this)">
+  </div>
+
+  <!-- 6. 协议勾选 (点击整行都可触发) -->
+  <div class="agreement" onclick="toggleCheck()">
+    <input type="checkbox" id="agreeCheck" onclick="event.stopPropagation(); toggleBtn()">
+    <div class="agreement-text">
+      <strong>授权声明：</strong><br>
+      我已知晓并同意，提交即代表<span class="highlight">授权 Pro Player 品牌</span>在官方渠道（官网、公众号、社媒等）使用我提交的反馈内容（截图、照片、评价等）用于品牌宣传。我们承诺仅展示内容，严格保护您的手机号等隐私信息。
+    </div>
+  </div>
+
+  <button id="submitBtn" class="btn-submit" disabled onclick="submitData()">确认提交</button>
+</div>
+
+<div class="footer">
+  Pro Player System V3.1<br>
+  Powered by Mars-老刘 & AI
+</div>
+
+<script>
+  let imgBase64 = null;
+  const platforms = ["朋友圈", "小红书", "抖音", "B站", "微博", "快手", "其他"];
+
+  // 初始化添加一行
+  addSocialRow();
+
+  function addSocialRow() {
+    const div = document.createElement('div');
+    div.className = 'social-row';
+    let opts = platforms.map(p => `<option value="${p}">${p}</option>`).join('');
+    div.innerHTML = `
+      <select class="social-select">${opts}</select>
+      <input class="social-input" placeholder="填写账号ID或链接">
+      <button class="btn-remove" onclick="this.parentElement.remove()">×</button>
+    `;
+    document.getElementById('socialList').appendChild(div);
+  }
+
+  function handleFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return alert("图片过大，请上传5MB以内");
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      imgBase64 = e.target.result;
+      document.getElementById('previewImg').src = imgBase64;
+      document.getElementById('previewImg').style.display = 'block';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 辅助点击逻辑
+  function toggleCheck() {
+    const chk = document.getElementById('agreeCheck');
+    chk.checked = !chk.checked;
+    toggleBtn();
+  }
+
+  function toggleBtn() {
+    setTimeout(() => {
+      document.getElementById('submitBtn').disabled = !document.getElementById('agreeCheck').checked;
+    }, 50);
+  }
+
+  async function submitData() {
+    const phone = document.getElementById('phone').value.trim();
+    const name = document.getElementById('userName').value.trim();
+    const raw = document.getElementById('rawText').value.trim();
+    const pros = document.getElementById('pros').value.trim();
+    const cons = document.getElementById('cons').value.trim();
+    
+    if (phone.length !== 11) return alert("请输入11位手机号作为ID");
+    if (!name) return alert("请填写称呼");
+    if (!imgBase64) return alert("请上传截图证明");
+
+    const socialRows = document.querySelectorAll('.social-row');
+    const socialData = [];
+    socialRows.forEach(row => {
+      const plat = row.querySelector('select').value;
+      const val = row.querySelector('input').value.trim();
+      if(val) socialData.push({ platform: plat, value: val });
+    });
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.innerText = "⏳ 提交中...";
+
+    // 提交所有字段
+    const { error } = await window.sb.from('feedbacks').upsert({
+      phone: phone,
+      user_name: name,
+      social_data: socialData,
+      raw_text: raw,
+      pros: pros,
+      cons: cons,
+      image_data: imgBase64,
+      consent: true
+    }, { onConflict: 'phone' });
+
+    if (error) {
+      alert("提交失败: " + error.message);
+      btn.disabled = false; btn.innerText = "确认提交";
+    } else {
+      document.getElementById('formPage').classList.add('hidden');
+      document.getElementById('successPage').classList.remove('hidden');
+      window.scrollTo(0,0);
+    }
+  }
+</script>
+</body>
+</html>
