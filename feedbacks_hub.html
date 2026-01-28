@@ -47,9 +47,9 @@
       border: 2px dashed #ddd; border-radius: 12px; padding: 30px; text-align: center; 
       background: #fafafa; cursor: pointer; transition: all 0.2s; position: relative;
     }
-    #previewImg { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; margin-top: 10px; }
+    #previewImg { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; margin-top: 10px; object-fit: contain; }
 
-    /* === 核心优化：超明显实心蓝勾选框 === */
+    /* 实心蓝勾选框 */
     .agreement { 
       display: flex; gap: 15px; align-items: flex-start; 
       background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 25px; 
@@ -57,15 +57,12 @@
     }
     .agreement:active { background: #f2f2f7; }
 
-    /* 隐藏原生 checkbox */
     .agreement input[type="checkbox"] { 
       appearance: none; -webkit-appearance: none;
       width: 26px; height: 26px; flex-shrink: 0; margin-top: 2px;
       border: 2px solid #ccc; border-radius: 6px; background: #fff;
       display: flex; align-items: center; justify-content: center; transition: 0.2s;
     }
-    
-    /* 选中状态：实心蓝背景 + 白色对号 */
     .agreement input[type="checkbox"]:checked {
       background-color: #007aff; border-color: #007aff;
     }
@@ -86,6 +83,7 @@
 <body>
 
 <div class="header">
+  <!-- 您可以在这里加您的 Base64 LOGO，如果没有就只显示文字 -->
   <img src="https://img.icons8.com/color/96/mouse-pad.png" class="logo">
   <h2>Pro Player 用户反馈中心</h2>
   <p>您的每一个观点，都是我们进化的动力<br>
@@ -96,12 +94,11 @@
 <div id="successPage" class="card hidden" style="text-align:center; padding:50px 20px;">
   <div style="font-size:50px;">🎉</div>
   <h2 style="margin:15px 0;">提交成功</h2>
-  <p>您的反馈已加密存储。<br>感谢您对 Pro Player 的支持！</p>
+  <p>您的反馈已上传至云端。<br>感谢您对 Pro Player 的支持！</p>
   <button onclick="location.reload()" style="margin-top:20px; background:#f2f2f7; color:#333; border:none; padding:10px 20px; border-radius:8px;">返回</button>
 </div>
 
 <div id="formPage" class="card">
-  <!-- 1. 身份信息 -->
   <div class="input-group">
     <label>登录手机号 (唯一身份ID) <span style="color:red">*</span></label>
     <input type="tel" id="phone" maxlength="11" placeholder="用于后续修改/覆盖资料，请务必填写真实号码">
@@ -112,20 +109,17 @@
     <input type="text" id="userName" placeholder="例如：Alex 或 微信昵称">
   </div>
 
-  <!-- 2. 多平台链接 -->
   <div class="input-group">
     <label>社交媒体发布信息 (支持添加多个)</label>
     <div id="socialList"></div>
     <button class="btn-add" onclick="addSocialRow()">+ 添加一个平台</button>
   </div>
 
-  <!-- 3. 原始文案搬运 -->
   <div class="input-group">
     <label>📋 社交媒体原始文案 (搬运)</label>
     <textarea id="rawText" rows="3" placeholder="在此粘贴您发布的朋友圈文案、小红书长文等..."></textarea>
   </div>
 
-  <!-- 4. 优缺点分流 -->
   <div class="input-group">
     <div class="badge badge-green">优点 / 爽点</div>
     <textarea id="pros" class="pros-box" rows="2" placeholder="觉得哪里好？(滑度、做工、包装等)"></textarea>
@@ -136,22 +130,21 @@
     <textarea id="cons" class="cons-box" rows="2" placeholder="哪里需要改进？请直言不讳"></textarea>
   </div>
 
-  <!-- 5. 截图上传 -->
   <div class="input-group">
-    <label>发布截图 (必填) <span style="color:red">*</span></label>
+    <label>发布截图 (必填, 支持高清) <span style="color:red">*</span></label>
     <div class="upload-box" onclick="document.getElementById('fileIn').click()">
       <div id="uploadPlaceholder">📷 点击上传图片</div>
       <img id="previewImg">
     </div>
+    <!-- 允许上传图片 -->
     <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(this)">
   </div>
 
-  <!-- 6. 协议勾选 (点击整行都可触发) -->
   <div class="agreement" onclick="toggleCheck()">
     <input type="checkbox" id="agreeCheck" onclick="event.stopPropagation(); toggleBtn()">
     <div class="agreement-text">
       <strong>授权声明：</strong><br>
-      我已知晓并同意，提交即代表<span class="highlight">授权 Pro Player 品牌</span>在官方渠道（官网、公众号、社媒等）使用我提交的反馈内容（截图、照片、评价等）用于品牌宣传。我们承诺仅展示内容，严格保护您的手机号等隐私信息。
+      我已知晓并同意，提交即代表<span class="highlight">授权 Pro Player 品牌</span>在官方渠道使用我提交的反馈内容（截图、照片、评价等）用于品牌宣传。我们承诺仅展示内容，严格保护您的手机号等隐私信息。
     </div>
   </div>
 
@@ -159,12 +152,12 @@
 </div>
 
 <div class="footer">
-  Pro Player System V3.1<br>
+  Pro Player System V4.0 (Storage Edition)<br>
   Powered by Mars-老刘 & AI
 </div>
 
 <script>
-  let imgBase64 = null;
+  let selectedFile = null;
   const platforms = ["朋友圈", "小红书", "抖音", "B站", "微博", "快手", "其他"];
 
   // 初始化添加一行
@@ -185,18 +178,22 @@
   function handleFile(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return alert("图片过大，请上传5MB以内");
+    
+    // 这里可以放宽限制了，比如 20MB
+    if (file.size > 20 * 1024 * 1024) return alert("图片过大，请上传20MB以内");
+    
+    selectedFile = file; // 保存文件对象，而不是 Base64
+
+    // 仅用于预览
     const reader = new FileReader();
     reader.onload = function(e) {
-      imgBase64 = e.target.result;
-      document.getElementById('previewImg').src = imgBase64;
+      document.getElementById('previewImg').src = e.target.result;
       document.getElementById('previewImg').style.display = 'block';
       document.getElementById('uploadPlaceholder').style.display = 'none';
     };
     reader.readAsDataURL(file);
   }
 
-  // 辅助点击逻辑
   function toggleCheck() {
     const chk = document.getElementById('agreeCheck');
     chk.checked = !chk.checked;
@@ -218,7 +215,7 @@
     
     if (phone.length !== 11) return alert("请输入11位手机号作为ID");
     if (!name) return alert("请填写称呼");
-    if (!imgBase64) return alert("请上传截图证明");
+    if (!selectedFile) return alert("请上传截图");
 
     const socialRows = document.querySelectorAll('.social-row');
     const socialData = [];
@@ -229,9 +226,35 @@
     });
 
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.innerText = "⏳ 提交中...";
+    btn.disabled = true; btn.innerText = "⏳ 正在上传图片...";
 
-    // 提交所有字段
+    // 1. 先上传图片到 Storage
+    // 文件名逻辑: phone_时间戳.后缀 (保证唯一且不覆盖)
+    const fileExt = selectedFile.name.split('.').pop();
+    const fileName = `${phone}_${Date.now()}.${fileExt}`;
+    const filePath = fileName;
+
+    const { data: uploadData, error: uploadError } = await window.sb
+      .storage
+      .from('feedbacks')
+      .upload(filePath, selectedFile);
+
+    if (uploadError) {
+      console.error("上传图片失败:", uploadError);
+      alert("图片上传失败: " + uploadError.message + "\n请检查 Bucket 是否创建且名为 feedbacks，并设为 Public。");
+      btn.disabled = false; btn.innerText = "确认提交";
+      return;
+    }
+
+    // 2. 获取公开链接
+    const { data: { publicUrl } } = window.sb
+      .storage
+      .from('feedbacks')
+      .getPublicUrl(filePath);
+      
+    btn.innerText = "⏳ 正在保存数据...";
+
+    // 3. 提交数据库 (存 URL 而不是 Base64)
     const { error } = await window.sb.from('feedbacks').upsert({
       phone: phone,
       user_name: name,
@@ -239,7 +262,7 @@
       raw_text: raw,
       pros: pros,
       cons: cons,
-      image_data: imgBase64,
+      image_data: publicUrl, // 存入 URL
       consent: true
     }, { onConflict: 'phone' });
 
