@@ -15,8 +15,7 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; padding: 20px; max-width: 600px; margin: auto; background: #f2f2f7; color: #333; padding-bottom: 60px; }
     
     .header { text-align: center; margin: 30px 0; }
-    .logo { width: 70px; height: 70px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 10px; }
-    h2 { margin: 0; font-weight: 800; font-size: 22px; color: #1c1c1e; }
+    h2 { margin: 0; font-weight: 800; font-size: 24px; color: #1c1c1e; letter-spacing: -0.5px; }
     p { color: #8e8e93; font-size: 13px; margin-top: 6px; }
 
     .card { background: #fff; padding: 24px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
@@ -27,29 +26,37 @@
       width: 100%; padding: 12px; border: 1px solid #e5e5ea; border-radius: 10px; 
       font-size: 15px; box-sizing: border-box; background: #f9f9f9; -webkit-appearance: none; font-family: inherit;
     }
-    input:focus, textarea:focus { border-color: #007aff; background: #fff; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: #007aff; background: #fff; outline: none; }
 
-    /* 多平台列表 */
+    /* === 1. 社交平台多行样式 (回归) === */
     .social-row { display: flex; gap: 8px; margin-bottom: 10px; }
     .social-select { flex: 1; }
     .social-input { flex: 2; }
     .btn-remove { width: 40px; background: #ff3b30; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     .btn-add { width: 100%; padding: 10px; border: 1px dashed #007aff; color: #007aff; background: #f0f7ff; border-radius: 10px; cursor: pointer; font-weight: 600; margin-top: 5px; }
 
-    /* 优缺点框 */
+    /* === 2. 优缺点彩色框 (回归) === */
     .pros-box { border: 2px solid #34c759; background: #f0f9f4; }
     .cons-box { border: 2px solid #ff9500; background: #fff8f0; }
     .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 5px; }
     .badge-green { background: #34c759; color: #fff; }
     .badge-orange { background: #ff9500; color: #fff; }
 
-    .upload-box { 
-      border: 2px dashed #ddd; border-radius: 12px; padding: 30px; text-align: center; 
-      background: #fafafa; cursor: pointer; transition: all 0.2s; position: relative;
+    /* === 3. 多图上传九宫格 (保留 V5 功能) === */
+    .img-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+    .img-item { position: relative; width: 100%; padding-bottom: 100%; border-radius: 8px; overflow: hidden; background: #eee; border: 1px solid #e5e5ea; }
+    .img-item img { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+    .img-del { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: #fff; width: 20px; height: 20px; border-radius: 50%; text-align: center; line-height: 18px; font-size: 14px; cursor: pointer; z-index: 2; }
+    
+    .upload-btn { 
+      position: relative; width: 100%; padding-bottom: 100%; border-radius: 8px; 
+      border: 2px dashed #007aff; background: #f0f7ff; cursor: pointer; display: flex; 
+      align-items: center; justify-content: center; flex-direction: column;
     }
-    #previewImg { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; margin-top: 10px; object-fit: contain; }
+    .upload-btn::after { content: "+"; font-size: 30px; color: #007aff; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .upload-limit { font-size: 10px; color: #999; margin-top: 5px; text-align: right; }
 
-    /* 实心蓝勾选框 */
+    /* === 4. 实心蓝勾选框 (回归) === */
     .agreement { 
       display: flex; gap: 15px; align-items: flex-start; 
       background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 25px; 
@@ -57,12 +64,15 @@
     }
     .agreement:active { background: #f2f2f7; }
 
+    /* 隐藏原生 checkbox */
     .agreement input[type="checkbox"] { 
       appearance: none; -webkit-appearance: none;
       width: 26px; height: 26px; flex-shrink: 0; margin-top: 2px;
       border: 2px solid #ccc; border-radius: 6px; background: #fff;
       display: flex; align-items: center; justify-content: center; transition: 0.2s;
     }
+    
+    /* 选中状态：实心蓝背景 + 白色对号 */
     .agreement input[type="checkbox"]:checked {
       background-color: #007aff; border-color: #007aff;
     }
@@ -72,6 +82,14 @@
 
     .agreement-text { font-size: 13px; color: #555; line-height: 1.6; text-align: justify; }
     .highlight { color: #007aff; font-weight: bold; }
+
+    /* 进度条弹窗 */
+    .progress-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 999; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    .progress-box { background: #fff; width: 80%; max-width: 320px; padding: 30px; border-radius: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .progress-bar-bg { width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin: 20px 0; }
+    .progress-bar-fill { height: 100%; background: #007aff; width: 0%; transition: width 0.3s ease; }
+    .success-mark { font-size: 50px; display: none; margin-bottom: 10px; animation: popIn 0.5s; }
+    @keyframes popIn { from{transform:scale(0);} to{transform:scale(1);} }
 
     .btn-submit { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
     .btn-submit:disabled { background: #d1d1d6; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
@@ -83,12 +101,8 @@
 <body>
 
 <div class="header">
-  <!-- 您可以在这里加您的 Base64 LOGO，如果没有就只显示文字 -->
-  <img src="https://img.icons8.com/color/96/mouse-pad.png" class="logo">
   <h2>Pro Player 用户反馈中心</h2>
-  <p>您的每一个观点，都是我们进化的动力<br>
-     <span style="color:#007aff; font-weight:bold;">提示：使用相同手机号提交可覆盖更新资料</span>
-  </p>
+  <p>使用相同手机号提交可覆盖更新资料</p>
 </div>
 
 <div id="successPage" class="card hidden" style="text-align:center; padding:50px 20px;">
@@ -99,9 +113,10 @@
 </div>
 
 <div id="formPage" class="card">
+  <!-- 身份 -->
   <div class="input-group">
     <label>登录手机号 (唯一身份ID) <span style="color:red">*</span></label>
-    <input type="tel" id="phone" maxlength="11" placeholder="用于后续修改/覆盖资料，请务必填写真实号码">
+    <input type="tel" id="phone" maxlength="11" placeholder="11位手机号">
   </div>
   
   <div class="input-group">
@@ -109,17 +124,30 @@
     <input type="text" id="userName" placeholder="例如：Alex 或 微信昵称">
   </div>
 
+  <!-- 1. 社交媒体多行录入 (回归) -->
   <div class="input-group">
-    <label>社交媒体发布信息 (支持添加多个)</label>
+    <label>社交媒体发布信息 (支持添加多个) <span style="color:red">*</span></label>
     <div id="socialList"></div>
     <button class="btn-add" onclick="addSocialRow()">+ 添加一个平台</button>
   </div>
 
+  <!-- 2. 图片上传 (多图 V5) -->
+  <div class="input-group">
+    <label>图片上传 (最多6张) <span style="color:red">*</span></label>
+    <div class="img-grid" id="imgGrid">
+      <div class="upload-btn" id="addBtn" onclick="document.getElementById('fileIn').click()"></div>
+    </div>
+    <div class="upload-limit" id="imgCount">0 / 6</div>
+    <input type="file" id="fileIn" accept="image/*" multiple style="display:none" onchange="handleFiles(this)">
+  </div>
+
+  <!-- 3. 原始文案 -->
   <div class="input-group">
     <label>📋 社交媒体原始文案 (搬运)</label>
     <textarea id="rawText" rows="3" placeholder="在此粘贴您发布的朋友圈文案、小红书长文等..."></textarea>
   </div>
 
+  <!-- 4. 优缺点 (回归) -->
   <div class="input-group">
     <div class="badge badge-green">优点 / 爽点</div>
     <textarea id="pros" class="pros-box" rows="2" placeholder="觉得哪里好？(滑度、做工、包装等)"></textarea>
@@ -130,34 +158,38 @@
     <textarea id="cons" class="cons-box" rows="2" placeholder="哪里需要改进？请直言不讳"></textarea>
   </div>
 
-  <div class="input-group">
-    <label>发布截图 (必填, 支持高清) <span style="color:red">*</span></label>
-    <div class="upload-box" onclick="document.getElementById('fileIn').click()">
-      <div id="uploadPlaceholder">📷 点击上传图片</div>
-      <img id="previewImg">
-    </div>
-    <!-- 允许上传图片 -->
-    <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(this)">
-  </div>
-
+  <!-- 5. 协议 (回归实心蓝) -->
   <div class="agreement" onclick="toggleCheck()">
     <input type="checkbox" id="agreeCheck" onclick="event.stopPropagation(); toggleBtn()">
     <div class="agreement-text">
       <strong>授权声明：</strong><br>
-      我已知晓并同意，提交即代表<span class="highlight">授权 Pro Player 品牌</span>在官方渠道使用我提交的反馈内容（截图、照片、评价等）用于品牌宣传。我们承诺仅展示内容，严格保护您的手机号等隐私信息。
+      我已知晓并同意，提交即代表<span class="highlight">授权 Pro Player 品牌</span>在官方渠道（官网、公众号、社媒等）使用我提交的反馈内容（截图、照片、评价等）用于品牌宣传。我们承诺仅展示内容，严格保护您的手机号等隐私信息。
     </div>
   </div>
 
   <button id="submitBtn" class="btn-submit" disabled onclick="submitData()">确认提交</button>
 </div>
 
-<div class="footer">
-  Pro Player System V4.0 (Storage Edition)<br>
-  Powered by Mars-老刘 & AI
+<div class="footer">Pro Player System V6.0</div>
+
+<!-- 进度弹窗 -->
+<div id="progressModal" class="progress-modal">
+  <div class="progress-box">
+    <div id="loadingIcon" style="font-size:40px;">⏳</div>
+    <div id="successIcon" class="success-mark">✅</div>
+    
+    <h3 id="statusTitle" style="margin:15px 0 5px;">准备上传...</h3>
+    <p id="statusDesc" style="color:#888; font-size:13px; margin:0;">正在连接服务器</p>
+    
+    <div class="progress-bar-bg">
+      <div id="progressBar" class="progress-bar-fill"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-  let selectedFile = null;
+  let selectedFiles = []; 
+  const MAX_IMGS = 6;
   const platforms = ["朋友圈", "小红书", "抖音", "B站", "微博", "快手", "其他"];
 
   // 初始化添加一行
@@ -175,24 +207,35 @@
     document.getElementById('socialList').appendChild(div);
   }
 
-  function handleFile(input) {
-    const file = input.files[0];
-    if (!file) return;
-    
-    // 这里可以放宽限制了，比如 20MB
-    if (file.size > 20 * 1024 * 1024) return alert("图片过大，请上传20MB以内");
-    
-    selectedFile = file; // 保存文件对象，而不是 Base64
+  function handleFiles(input) {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+    if (selectedFiles.length + files.length > MAX_IMGS) return alert(`最多只能上传 ${MAX_IMGS} 张`);
 
-    // 仅用于预览
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('previewImg').src = e.target.result;
-      document.getElementById('previewImg').style.display = 'block';
-      document.getElementById('uploadPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    files.forEach(f => {
+      if (f.size > 20 * 1024 * 1024) alert(`图片 ${f.name} 太大`);
+      else selectedFiles.push(f);
+    });
+    renderPreview();
+    input.value = ""; 
   }
+
+  function renderPreview() {
+    const grid = document.getElementById('imgGrid');
+    const addBtn = document.getElementById('addBtn');
+    while (grid.children.length > 1) grid.removeChild(grid.firstChild);
+
+    selectedFiles.forEach((f, idx) => {
+      const div = document.createElement('div');
+      div.className = 'img-item';
+      div.innerHTML = `<img src="${URL.createObjectURL(f)}"><div class="img-del" onclick="removeImg(${idx})">×</div>`;
+      grid.insertBefore(div, addBtn);
+    });
+    document.getElementById('imgCount').innerText = `${selectedFiles.length} / ${MAX_IMGS}`;
+    addBtn.style.display = selectedFiles.length >= MAX_IMGS ? 'none' : 'flex';
+  }
+
+  function removeImg(idx) { selectedFiles.splice(idx, 1); renderPreview(); }
 
   function toggleCheck() {
     const chk = document.getElementById('agreeCheck');
@@ -212,11 +255,12 @@
     const raw = document.getElementById('rawText').value.trim();
     const pros = document.getElementById('pros').value.trim();
     const cons = document.getElementById('cons').value.trim();
-    
-    if (phone.length !== 11) return alert("请输入11位手机号作为ID");
-    if (!name) return alert("请填写称呼");
-    if (!selectedFile) return alert("请上传截图");
 
+    if (phone.length !== 11) return alert("请输入11位手机号");
+    if (!name) return alert("请填写称呼");
+    if (selectedFiles.length === 0) return alert("请至少上传一张图片");
+
+    // 收集社交平台
     const socialRows = document.querySelectorAll('.social-row');
     const socialData = [];
     socialRows.forEach(row => {
@@ -224,55 +268,52 @@
       const val = row.querySelector('input').value.trim();
       if(val) socialData.push({ platform: plat, value: val });
     });
+    if (socialData.length === 0) return alert("请至少填写一个社交平台信息");
 
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.innerText = "⏳ 正在上传图片...";
+    // 进度条
+    const modal = document.getElementById('progressModal');
+    const bar = document.getElementById('progressBar');
+    const title = document.getElementById('statusTitle');
+    
+    modal.style.display = "flex";
+    
+    try {
+      const uploadedUrls = [];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const pct = Math.round(((i) / selectedFiles.length) * 80);
+        bar.style.width = pct + "%";
+        title.innerText = `正在上传图片 (${i+1}/${selectedFiles.length})`;
+        
+        const ext = file.name.split('.').pop();
+        const path = `${phone}_${Date.now()}_${i}.${ext}`;
+        
+        const { error: upErr } = await window.sb.storage.from('feedbacks').upload(path, file);
+        if (upErr) throw upErr;
+        const { data: { publicUrl } } = window.sb.storage.from('feedbacks').getPublicUrl(path);
+        uploadedUrls.push(publicUrl);
+      }
 
-    // 1. 先上传图片到 Storage
-    // 文件名逻辑: phone_时间戳.后缀 (保证唯一且不覆盖)
-    const fileExt = selectedFile.name.split('.').pop();
-    const fileName = `${phone}_${Date.now()}.${fileExt}`;
-    const filePath = fileName;
-
-    const { data: uploadData, error: uploadError } = await window.sb
-      .storage
-      .from('feedbacks')
-      .upload(filePath, selectedFile);
-
-    if (uploadError) {
-      console.error("上传图片失败:", uploadError);
-      alert("图片上传失败: " + uploadError.message + "\n请检查 Bucket 是否创建且名为 feedbacks，并设为 Public。");
-      btn.disabled = false; btn.innerText = "确认提交";
-      return;
-    }
-
-    // 2. 获取公开链接
-    const { data: { publicUrl } } = window.sb
-      .storage
-      .from('feedbacks')
-      .getPublicUrl(filePath);
+      bar.style.width = "90%";
+      title.innerText = "正在保存数据...";
       
-    btn.innerText = "⏳ 正在保存数据...";
+      const { error: dbErr } = await window.sb.from('feedbacks').upsert({
+        phone: phone, user_name: name, social_data: socialData,
+        raw_text: raw, pros: pros, cons: cons, images: uploadedUrls, consent: true
+      }, { onConflict: 'phone' });
 
-    // 3. 提交数据库 (存 URL 而不是 Base64)
-    const { error } = await window.sb.from('feedbacks').upsert({
-      phone: phone,
-      user_name: name,
-      social_data: socialData,
-      raw_text: raw,
-      pros: pros,
-      cons: cons,
-      image_data: publicUrl, // 存入 URL
-      consent: true
-    }, { onConflict: 'phone' });
+      if (dbErr) throw dbErr;
 
-    if (error) {
-      alert("提交失败: " + error.message);
-      btn.disabled = false; btn.innerText = "确认提交";
-    } else {
-      document.getElementById('formPage').classList.add('hidden');
-      document.getElementById('successPage').classList.remove('hidden');
-      window.scrollTo(0,0);
+      bar.style.width = "100%"; bar.style.background = "#34c759";
+      document.getElementById('loadingIcon').style.display = "none";
+      document.getElementById('successIcon').style.display = "block";
+      title.innerText = "提交成功！";
+
+      setTimeout(() => location.reload(), 2000);
+
+    } catch (err) {
+      alert("出错: " + err.message);
+      modal.style.display = "none";
     }
   }
 </script>
