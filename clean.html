@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Player | 表面动力学维护协议 (v1.5 Audio Max)</title>
+    <!-- 引入战术风格字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00f3ff; /* 赛博蓝 */
+            --secondary: #7000ff; /* 霓虹紫 */
+            --alert: #ff2a2a; /* 警告红 */
+            --bg: #050505;
+            --panel: #0f1115;
+            --text: #c0c5ce;
+            --highlight: #ffffff;
+            --grid-color: rgba(0, 243, 255, 0.03);
+            --success: #00ff41;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.7;
+            overflow-x: hidden;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 30px 30px;
+            padding-bottom: 80px;
+            cursor: crosshair; /* 战术准星 */
+        }
+
+        /* 顶部扫描线特效 */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 999;
+            animation: flicker 0.15s infinite;
+            opacity: 0.08;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.08; }
+            50% { opacity: 0.12; }
+            100% { opacity: 0.08; }
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 50px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 头部设计 */
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+            padding-bottom: 25px;
+            position: relative;
+        }
+
+        header::after {
+            content: "";
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 30%;
+            height: 5px;
+            background: var(--primary);
+            animation: loadBar 2s ease-out forwards;
+        }
+        
+        @keyframes loadBar { from { width: 0; } to { width: 30%; } }
+
+        header h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        header .subtitle {
+            font-size: 1rem;
+            color: #888;
+            letter-spacing: 3px;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        header .badge {
+            display: inline-block;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            margin-top: 15px;
+            letter-spacing: 2px;
+        }
+
+        /* 欢迎语卡片 */
+        .intro-card {
+            background: rgba(0, 243, 255, 0.03);
+            border-left: 3px solid var(--primary);
+            padding: 25px;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .intro-card p {
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .intro-card p:last-child { margin-bottom: 0; }
+        .highlight { color: var(--primary); font-weight: bold; }
+
+        /* 通用标题 */
+        h2 {
+            font-size: 1.6rem;
+            color: var(--highlight);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px dashed #333;
+            padding-bottom: 10px;
+            text-shadow: 0 0 5px rgba(255,255,255,0.1);
+        }
+
+        h2 i {
+            margin-right: 15px;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        /* 顶部警告条动态效果 */
+        .alert-bar {
+            background: rgba(255, 42, 42, 0.15);
+            border: 2px solid var(--alert);
+            color: var(--alert);
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            animation: alertPulse 1.5s infinite;
+        }
+        
+        .alert-bar i { margin-right: 10px; font-size: 1.2rem; }
+
+        @keyframes alertPulse {
+            0% { box-shadow: 0 0 5px rgba(255, 42, 42, 0.2); border-color: rgba(255, 42, 42, 0.6); }
+            50% { box-shadow: 0 0 20px rgba(255, 42, 42, 0.6); border-color: rgba(255, 42, 42, 1); }
+            100% { box-shadow: 0 0 5px rgba(255, 42, 42, 0.2); border-color: rgba(255, 42, 42, 0.6); }
+        }
+
+        /* 试剂表格 */
+        .reagent-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 60px;
+        }
+
+        .reagent-panel {
+            background: var(--panel);
+            border: 1px solid #333;
+            padding: 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .reagent-panel:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+        }
+
+        .reagent-header {
+            background: #15181e;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .region-tag {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .product-list {
+            padding: 20px;
+        }
+
+        .product-list li {
+            list-style: none;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 15px;
+        }
+        
+        .product-list li:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .product-name {
+            font-weight: bold;
+            color: #fff;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .product-desc {
+            font-size: 0.85rem;
+            color: #888;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* 稀释比例框 */
+        .dilution-box {
+            background: rgba(0, 243, 255, 0.05);
+            border-left: 2px solid var(--secondary);
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            color: #ddd;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .dilution-box i {
+            color: var(--secondary);
+            margin-right: 8px;
+            margin-top: 3px;
+        }
+
+        .badge-star {
+            color: #ffd700;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+
+        /* 清洗步骤卡片 */
+        .step {
+            background: var(--panel);
+            margin-bottom: 25px;
+            padding: 30px;
+            border-left: 4px solid #333;
+            display: flex;
+            align-items: flex-start;
+            transition: all 0.3s;
+        }
+
+        .step:hover {
+            border-left-color: var(--primary);
+            background: rgba(15, 17, 21, 0.9);
+            transform: translateX(5px);
+        }
+
+        .step-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #222;
+            margin-right: 30px;
+            line-height: 0.8;
+            font-family: 'Arial', sans-serif;
+            transition: color 0.3s;
+            min-width: 60px;
+        }
+
+        .step:hover .step-number {
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0,243,255,0.2);
+        }
+
+        .step-content {
+            width: 100%;
+        }
+
+        .step-content h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .step-content p {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .science-note {
+            display: block;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #777;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 8px;
+            font-style: italic;
+        }
+        
+        /* 红色文字强调 */
+        .text-alert {
+            color: var(--alert);
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255, 42, 42, 0.4);
+            cursor: pointer;
+        }
+        .text-alert:active {
+            color: #fff;
+            background: var(--alert);
+        }
+
+        /* 模型对比框 */
+        .model-comparison {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .model-box {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border: 1px solid #333;
+            position: relative;
+        }
+        
+        .model-box::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+        }
+        
+        .model-box:first-child::before { background: var(--secondary); } 
+        .model-box:last-child::before { background: var(--primary); }
+
+        .model-box strong {
+            display: block;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+
+        /* 存储协议模块 */
+        .storage-box {
+            background: rgba(0, 243, 255, 0.02);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            padding: 20px;
+            margin: 30px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .storage-box i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-right: 20px;
+        }
+
+        /* ----------------------- 
+           高危警告区域特效 (v1.5)
+           ----------------------- */
+        .warning-zone {
+            border: 2px solid var(--alert);
+            background: rgba(20, 0, 0, 0.6);
+            padding: 35px;
+            margin-top: 60px;
+            position: relative;
+            overflow: hidden;
+            animation: warningBreathe 2s infinite ease-in-out;
+        }
+
+        @keyframes warningBreathe {
+            0% { box-shadow: 0 0 10px rgba(255, 42, 42, 0.1); border-color: rgba(255, 42, 42, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(255, 42, 42, 0.4); border-color: rgba(255, 42, 42, 1); }
+            100% { box-shadow: 0 0 10px rgba(255, 42, 42, 0.1); border-color: rgba(255, 42, 42, 0.5); }
+        }
+
+        /* 动态危险条纹背景 */
+        .hazard-stripes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 20px,
+                rgba(255, 42, 42, 0.05) 20px,
+                rgba(255, 42, 42, 0.05) 40px
+            );
+            pointer-events: none;
+            z-index: 0;
+            animation: scrollStripes 4s linear infinite;
+        }
+
+        @keyframes scrollStripes {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-10%); }
+        }
+
+        .warning-zone::before {
+            content: "FATAL ERRORS // RESTRICTED";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--alert);
+            color: #000;
+            padding: 4px 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            z-index: 2;
+            animation: blinkTag 1s infinite;
+        }
+
+        @keyframes blinkTag {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .warning-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .warning-item {
+            padding: 20px;
+            border: 1px solid rgba(255, 42, 42, 0.4);
+            background: rgba(0, 0, 0, 0.7);
+            transition: background 0.3s;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .warning-item:hover {
+            background: rgba(255, 42, 42, 0.1);
+            border-color: var(--alert);
+            box-shadow: 0 0 15px rgba(255, 42, 42, 0.2);
+        }
+        
+        .warning-item:active {
+            background: var(--alert);
+            color: #000;
+        }
+        .warning-item:active * { color: #000 !important; }
+
+        .warning-item h4 {
+            color: var(--alert);
+            margin-bottom: 10px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .warning-item h4 i { margin-right: 10px; }
+
+        .warning-item p {
+            font-size: 0.85rem;
+            color: #faa;
+            line-height: 1.4;
+            opacity: 0.9;
+        }
+
+        /* 页脚 */
+        footer {
+            margin-top: 80px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #555;
+            border-top: 1px solid #222;
+            padding-top: 30px;
+        }
+
+        .quote {
+            font-style: italic;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            text-shadow: 0 0 10px rgba(0,243,255,0.3);
+        }
+
+        /* 全屏初始化遮罩 (战术音频版) */
+        #init-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: var(--primary);
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+        #init-overlay h1 { font-size: 2rem; margin-bottom: 10px; animation: blinkTag 1s infinite; letter-spacing: 2px; }
+        #init-overlay p { font-size: 1rem; color: #888; }
+        #init-overlay:hover { background: rgba(0,0,0,0.9); }
+        #init-overlay i { font-size: 3rem; margin-bottom: 20px; color: var(--primary); text-shadow: 0 0 20px var(--primary); }
+
+        /* 响应式适配 */
+        @media (max-width: 700px) {
+            .reagent-grid { grid-template-columns: 1fr; }
+            .model-comparison { flex-direction: column; }
+            header h1 { font-size: 2.2rem; }
+            .step { padding: 20px; }
+            .step-number { font-size: 2rem; margin-right: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 战术音频初始化遮罩 -->
+    <div id="init-overlay" onclick="initAudio()">
+        <i class="fas fa-fingerprint"></i>
+        <h1>INITIALIZE TACTICAL AUDIO</h1>
+        <p>[ CLICK ANYWHERE TO ACCESS TERMINAL ]</p>
+    </div>
+
+    <div class="container">
+        <!-- 头部：中等悬停音 + 点击音效 -->
+        <header onmouseenter="playHoverMedium()" onmousedown="playClickCrisp()">
+            <h1>PRO PLAYER</h1>
+            <div class="subtitle">Laboratory Maintenance Protocol v1.5</div>
+            <div class="badge">SURFACE DYNAMICS // 表面动力学协议</div>
+        </header>
+
+        <!-- 欢迎卡片：轻微悬停音 -->
+        <div class="intro-card" onmouseenter="playHoverLight()">
+            <p><strong><i class="fas fa-terminal"></i> 致指挥官：</strong></p>
+            <p>您手中的 <strong>Pro Player</strong> 并非普通的桌面耗材，而是一个由<span class="highlight">高分子天然橡胶底材</span>与<span class="highlight">精密纺织矩阵</span>构成的“微米级竞技平台”。</p>
+            <p>为了防止发生物理意义上的“感官迟滞”与“定位漂移”，请严格执行以下维护协议。</p>
+        </div>
+
+        <!-- 试剂部分 -->
+        <h2><i class="fas fa-flask"></i> 第一阶段：试剂定标 (Reagents)</h2>
+        
+        <!-- 红色警戒条：电流声悬停 + 拒绝点击 -->
+        <div class="alert-bar" onmouseenter="playWarningHover()" onmousedown="playLowDeny()">
+            <i class="fas fa-exclamation-triangle"></i> WARNING: NEUTRAL DETERGENT ONLY / 严禁使用非中性试剂
+        </div>
+
+        <div class="reagent-grid">
+            <!-- 北美区域 -->
+            <div class="reagent-panel" onmouseenter="playHoverMedium()">
+                <div class="reagent-header">
+                    <span class="region-tag">NA / 北美战区</span>
+                    <i class="fas fa-globe-americas" style="color:#555"></i>
+                </div>
+                <ul class="product-list">
+                    <!-- 新增：列表项数据流音效 -->
+                    <li onmouseenter="playDataTick()">
+                        <span class="product-name" style="color:var(--primary)">
+                            Dawn Ultra (Blue) <i class="fas fa-star badge-star"></i>
+                        </span>
+                        <span class="product-desc">北美 FPS 圈“行业标准” (The GOAT)。强效去油且不伤底胶。</span>
+                        <!-- 新增：稀释信息提示音 -->
+                        <div class="dilution-box" onmouseenter="playInfoTone()">
+                            <i class="fas fa-tint"></i>
+                            <div><strong>稀释标准 (Dilution):</strong><br>严禁原液直涂！<br>比例 1:50，或将 3-5 滴溶于一脸盆清水中搅拌至起泡。</div>
+                        </div>
+                    </li>
+                    <li onmouseenter="playDataTick()">
+                        <span class="product-name">Woolite Delicates</span>
+                        <span class="product-desc">精密护理洗衣液 / 极度温和。</span>
+                        <div class="dilution-box" onmouseenter="playInfoTone()">
+                            <i class="fas fa-tint"></i>
+                            <div><strong>稀释标准 (Dilution):</strong><br>高浓缩配方。仅需 10ml (约半瓶盖) 溶于大量冷水中。</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <!-- 中国区域 -->
+            <div class="reagent-panel" onmouseenter="playHoverMedium()">
+                <div class="reagent-header">
+                    <span class="region-tag">CN / 中国战区</span>
+                    <i class="fas fa-globe-asia" style="color:#555"></i>
+                </div>
+                <ul class="product-list">
+                    <li onmouseenter="playDataTick()">
+                        <span class="product-name" style="color:var(--primary)">
+                            蓝月亮 丝毛净 <i class="fas fa-star badge-star"></i>
+                        </span>
+                        <span class="product-desc">中性洗衣液 / 专为娇贵纤维设计。</span>
+                        <div class="dilution-box" onmouseenter="playInfoTone()">
+                            <i class="fas fa-tint"></i>
+                            <div><strong>稀释标准 (Dilution):</strong><br>建议先在水中完全溶解后再放入垫子。切勿将粘稠原液倒在干垫子上。</div>
+                        </div>
+                    </li>
+                    <li onmouseenter="playDataTick()">
+                        <span class="product-name">立白 (透明瓶装)</span>
+                        <span class="product-desc">必须选择透明液体型号 / 拒绝任何带“强力去油/漂白”字样的产品。</span>
+                        <div class="dilution-box" onmouseenter="playInfoTone()">
+                            <i class="fas fa-tint"></i>
+                            <div><strong>稀释标准 (Dilution):</strong><br>取黄豆大小 (Pea-sized) 溶于水中，切勿过量。</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 清洗步骤 -->
+        <h2><i class="fas fa-microscope"></i> 第二阶段：临床操作 (S.O.P.)</h2>
+        
+        <div class="step" onmouseenter="playStepScan()" onmousedown="playClickCrisp()">
+            <div class="step-number">01</div>
+            <div class="step-content">
+                <h3>浸润 (Hydration)</h3>
+                <p>将垫子平置于 <strong style="color:var(--primary)">T < 30°C</strong> 的冷水中完全淋湿。</p>
+                <span class="science-note">⚠️ 物理定律：高温会导致天然橡胶交联键断裂。使用热水将导致垫子直接进入“报废倒计时”。</span>
+            </div>
+        </div>
+
+        <div class="step" onmouseenter="playStepScan()" onmousedown="playClickCrisp()">
+            <div class="step-number">02</div>
+            <div class="step-content">
+                <h3>分型处理 (Surface Topography)</h3>
+                <!-- 新增：模块加载音效 -->
+                <div class="model-comparison">
+                    <div class="model-box" onmouseenter="playBassDrop()">
+                        <strong>MODEL A <span style="font-size:0.7rem; background:#333; padding:2px 5px;">微粗控制型</span></strong>
+                        <p>针对其“微峰谷”结构，使用<span class="highlight">软毛刷</span>蘸取稀释后的试剂，顺着织物经纬线方向轻微打圈。</p>
+                        <span class="science-note">目标：清除缝隙中残留的皮屑与碳基生物油脂。</span>
+                    </div>
+                    <div class="model-box" onmouseenter="playBassDrop()">
+                        <strong>MODEL B <span style="font-size:0.7rem; background:#333; padding:2px 5px;">中性偏滑型</span></strong>
+                        <p>针对其高一致性表面，请使用<span class="highlight">超细纤维布或海绵</span>蘸取稀释液轻轻擦拭。严禁用力揉搓。</p>
+                        <span class="science-note">目标：避免纤维起毛，防止产生物理意义上的“微米级毛刺”。</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step" onmouseenter="playStepScan()" onmousedown="playClickCrisp()">
+            <div class="step-number">03</div>
+            <div class="step-content">
+                <h3>离子清除 (Rinsing)</h3>
+                <p>用大量流动的冷水反复冲洗。</p>
+                <span class="science-note">⚠️ 任何表面活性剂残留干透后都会形成一层“阻尼膜”。如果你洗完觉得垫子变涩了，99% 的原因是你还没冲干净。</span>
+            </div>
+        </div>
+
+        <div class="step" onmouseenter="playStepScan()" onmousedown="playClickCrisp()">
+            <div class="step-number">04</div>
+            <div class="step-content">
+                <h3>动力学固定 (Drying)</h3>
+                <p>将垫子平铺在阴凉通风处<strong>自然阴干</strong>。</p>
+                <!-- 红色高亮文本 - 绑定低沉拒绝音 -->
+                <span class="science-note text-alert" onmousedown="playLowDeny()">
+                    🚫 熵增预警：绝对禁止阳光暴晒、电吹风热风吹干。紫外线是天然橡胶的天敌。 (点击检测)
+                </span>
+            </div>
+        </div>
+
+        <div class="storage-box" onmouseenter="playHoverLight()" onmousedown="playClickCrisp()">
+            <i class="fas fa-box-open"></i>
+            <div>
+                <h4 style="color:var(--primary); margin-bottom:5px;">存储协议 (STORAGE PROTOCOL)</h4>
+                <p style="font-size:0.9rem; color:#aaa;">如需携带，请务必将<strong>图案/布面朝外（Outward）</strong>卷起。内卷会导致布面纤维挤压叠加，产生不可逆的物理折痕。</p>
+            </div>
+        </div>
+
+        <!-- 警告区域 (v1.5 完整特效) -->
+        <div class="warning-zone">
+            <!-- 动态条纹层 -->
+            <div class="hazard-stripes"></div>
+            
+            <h2 style="color:var(--alert); border-bottom-color:var(--alert); margin-top:0; text-shadow:none; font-size:1.4rem; position:relative; z-index:1;">
+                <i class="fas fa-radiation" style="color:var(--alert)"></i> 职业禁忌 (THE DON'TS)
+            </h2>
+            <div class="warning-grid">
+                <!-- 绑定低沉音效 -->
+                <div class="warning-item" onmousedown="playLowDeny()" onmouseenter="playWarningHover()">
+                    <h4><i class="fas fa-sun"></i> 严禁光氧老化</h4>
+                    <p>禁止暴晒与热风。这会导致底胶硬化、开裂，彻底丧失回弹性。</p>
+                </div>
+                <div class="warning-item" onmousedown="playLowDeny()" onmouseenter="playWarningHover()">
+                    <h4><i class="fas fa-ban"></i> 严禁机洗/暴力</h4>
+                    <p>洗衣机的离心力会摧毁橡胶结构的稳定性。禁止像拧衣服一样拧干。</p>
+                </div>
+                <div class="warning-item" onmousedown="playLowDeny()" onmouseenter="playWarningHover()">
+                    <h4><i class="fas fa-wine-bottle"></i> 严禁酒精接触</h4>
+                    <p>酒精会抽取纤维水分并加速橡胶硬化，导致物理摩擦系数改变（即使无涂层）。</p>
+                </div>
+                <div class="warning-item" onmousedown="playLowDeny()" onmouseenter="playWarningHover()">
+                    <h4><i class="fas fa-soap"></i> 严禁肥皂</h4>
+                    <p>肥皂会留下难以清洗的白色蜡质残留，让你的传感器在上面“溜冰”。</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div class="quote" onmouseenter="playHoverLight()">"干净的表面，是精准压枪的物理基础。"</div>
+            <p>PRO PLAYER SYSTEM // AUTHORIZED BY MARS-老刘 & AI</p>
+            <p style="font-size:0.7rem; opacity:0.5; margin-top:5px;">COPYRIGHT © 2026 PRO PLAYER. ALL RIGHTS RESERVED.</p>
+        </footer>
+    </div>
+
+    <!-- 战术音频控制系统 -->
+    <script>
+        let audioCtx;
+        let isInit = false;
+
+        function initAudio() {
+            if (isInit) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            
+            // 播放科幻启动音效
+            playStartupSound();
+            
+            // 移除遮罩
+            const overlay = document.getElementById('init-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+            isInit = true;
+        }
+
+        // 通用振荡器生成器
+        function createOscillator(type, freq, duration, vol) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        /* --- 原有基础音效 --- */
+
+        // 1. 轻微悬停音
+        function playHoverLight() {
+            if (!audioCtx) return;
+            createOscillator('sine', 1200, 0.05, 0.05);
+        }
+
+        // 2. 中等悬停音
+        function playHoverMedium() {
+            if (!audioCtx) return;
+            createOscillator('square', 400, 0.05, 0.05);
+            setTimeout(() => createOscillator('square', 600, 0.05, 0.03), 50);
+        }
+
+        // 3. 步骤扫描音
+        function playStepScan() {
+            if (!audioCtx) return;
+            createOscillator('sawtooth', 150, 0.1, 0.05);
+        }
+
+        // 4. 警告区悬停音 (电流声)
+        function playWarningHover() {
+            if (!audioCtx) return;
+            createOscillator('sawtooth', 60, 0.2, 0.1);
+        }
+
+        // 5. 低沉拒绝音 (Low Deny - 您喜欢的)
+        function playLowDeny() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            // Pulse 1
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine'; 
+            osc1.frequency.setValueAtTime(150, now);
+            osc1.frequency.exponentialRampToValueAtTime(40, now + 0.15); 
+            
+            gain1.gain.setValueAtTime(0.5, now);
+            gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            osc1.stop(now + 0.15);
+
+            // Pulse 2 (回声)
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'triangle'; 
+                osc2.frequency.setValueAtTime(100, now + 0.1);
+                osc2.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+                
+                gain2.gain.setValueAtTime(0.3, now + 0.1);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start();
+                osc2.stop(now + 0.25);
+            }, 80);
+        }
+
+        /* --- 新增音效 (增加密度) --- */
+
+        // 6. 数据流滴答声 (用于列表项) - 极短的高频音
+        function playDataTick() {
+            if (!audioCtx) return;
+            createOscillator('sine', 2000, 0.03, 0.02);
+        }
+
+        // 7. 信息提示音 (用于稀释说明) - 双音阶
+        function playInfoTone() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            // Tone 1
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(800, now);
+            gain1.gain.setValueAtTime(0.05, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            osc1.stop(now + 0.1);
+
+            // Tone 2
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1200, now);
+                gain2.gain.setValueAtTime(0.05, now);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start();
+                osc2.stop(now + 0.2);
+            }, 80);
+        }
+
+        // 8. 模块低频音 (用于 Model A/B) - 重低音
+        function playBassDrop() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(80, now);
+            osc.frequency.linearRampToValueAtTime(40, now + 0.3);
+            
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(now + 0.3);
+        }
+
+        // 9. 清脆点击确认音 (用于普通点击) - 高科技点击
+        function playClickCrisp() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            // 噪音突发
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1000, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+            
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(now + 0.05);
+        }
+
+        // 启动音效 (Startup)
+        function playStartupSound() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(800, now + 0.5);
+            
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+            gain.gain.linearRampToValueAtTime(0, now + 0.6);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(now + 0.6);
+        }
+    </script>
+</body>
+</html>
