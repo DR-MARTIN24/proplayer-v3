@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pro Player · 用户反馈</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // 使用 V9.x 的配置
+    const SUPABASE_URL = "https://ztesoqtztyheezualipa.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0ZXNvcXR6dHloZWV6dWFsaXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMjk0OTQsImV4cCI6MjA4MzkwNTQ5NH0.rRJIduqiWd37I3w0i-tyKn1skmehLKcX4AOYc-i2cbI";
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; padding: 20px; max-width: 500px; margin: auto; background: #f2f2f7; color: #333; }
+    
+    .header { text-align: center; margin-bottom: 25px; margin-top: 20px; }
+    .logo { width: 70px; height: 70px; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 10px; }
+    h2 { margin: 0; font-weight: 800; font-size: 22px; color: #1c1c1e; }
+    p { color: #8e8e93; font-size: 13px; margin-top: 6px; line-height: 1.5; }
+
+    .card { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
+    
+    .input-group { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 700; }
+    input, textarea, select { 
+      width: 100%; padding: 14px; border: 1px solid #e5e5ea; border-radius: 12px; 
+      font-size: 16px; box-sizing: border-box; background: #f9f9f9; -webkit-appearance: none; font-family: inherit;
+    }
+    input:focus, textarea:focus { border-color: #007aff; background: #fff; outline: none; }
+    
+    /* 上传区域 */
+    .upload-box { 
+      border: 2px dashed #ddd; border-radius: 12px; padding: 30px; text-align: center; 
+      background: #fafafa; cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    .upload-box.active { border-color: #007aff; background: #f0f7ff; }
+    .upload-icon { font-size: 32px; margin-bottom: 5px; display: block; }
+    .upload-tip { font-size: 12px; color: #999; }
+    #previewImg { max-width: 100%; max-height: 200px; border-radius: 8px; display: none; margin-top: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+    /* 协议勾选框 */
+    .agreement { display: flex; gap: 10px; align-items: flex-start; background: #f2f2f7; padding: 15px; border-radius: 12px; margin-bottom: 25px; }
+    .agreement input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+    .agreement-text { font-size: 12px; color: #555; line-height: 1.6; text-align: justify; }
+
+    .btn-submit { width: 100%; padding: 16px; background: #007aff; color: #fff; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(0,122,255,0.3); }
+    .btn-submit:disabled { background: #d1d1d6; color: #fff; cursor: not-allowed; box-shadow: none; }
+    .btn-submit:active { opacity: 0.8; transform: scale(0.98); }
+
+    .hidden { display: none; }
+    .success-icon { font-size: 60px; margin-bottom: 20px; }
+    footer { text-align: center; font-size: 11px; color: #ccc; margin-top: 40px; }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <img src="https://img.icons8.com/color/96/mouse-pad.png" class="logo">
+  <h2>Pro Player 体验反馈</h2>
+  <p>每一位 Pro Player 的声音都值得被听见<br>期待您的真实体验与分享</p>
+</div>
+
+<!-- 提交成功页 -->
+<div id="successPage" class="card hidden" style="text-align:center; padding:50px 20px;">
+  <div class="success-icon">🎉</div>
+  <h2 style="margin-bottom:10px;">提交成功！</h2>
+  <p>感谢您的分享，您的反馈是我们进步的动力。<br>我们会认真阅读每一条建议。</p>
+</div>
+
+<!-- 表单页 -->
+<div id="formPage" class="card">
+  <div class="input-group">
+    <label>您的称呼 / ID <span style="color:red">*</span></label>
+    <input id="userName" placeholder="例如：Alex 或 微信昵称">
+  </div>
+
+  <div class="input-group">
+    <label>分享平台</label>
+    <select id="platform">
+      <option value="朋友圈">微信朋友圈</option>
+      <option value="小红书">小红书</option>
+      <option value="抖音">抖音</option>
+      <option value="B站">Bilibili</option>
+      <option value="微博">微博</option>
+      <option value="其他">其他</option>
+    </select>
+  </div>
+
+  <div class="input-group">
+    <label>社交账号 / 链接 (方便我们找到您)</label>
+    <input id="socialId" placeholder="填写发布页链接 或 您的账号ID">
+  </div>
+
+  <div class="input-group">
+    <label>截图上传 (朋友圈/帖子截图) <span style="color:red">*</span></label>
+    <div class="upload-box" onclick="document.getElementById('fileIn').click()">
+      <div id="uploadPlaceholder">
+        <span class="upload-icon">📷</span>
+        <span class="upload-tip">点击选择图片 (支持 JPG/PNG)</span>
+      </div>
+      <img id="previewImg">
+    </div>
+    <input type="file" id="fileIn" accept="image/*" style="display:none" onchange="handleFile(this)">
+  </div>
+
+  <div class="input-group">
+    <label>使用体验 / 建议 (选填)</label>
+    <textarea id="content" rows="3" placeholder="鼠标垫顺滑度如何？包装满意吗？任何建议都可以写在这里..."></textarea>
+  </div>
+
+  <!-- 法律协议 -->
+  <div class="agreement">
+    <input type="checkbox" id="agreeCheck" onchange="toggleBtn()">
+    <div class="agreement-text">
+      <strong>授权声明：</strong><br>
+      我已知晓并同意，Pro Player 品牌有权将我本次提交的反馈内容（包含但不限于截图、照片、文字评价）用于官方渠道的品牌宣传与展示（如官网、公众号、社交媒体推广等）。我们承诺将严格保护您的其他个人隐私信息。
+    </div>
+  </div>
+
+  <button id="submitBtn" class="btn-submit" disabled onclick="submitData()">确认提交</button>
+</div>
+
+<div class="footer">
+  Pro Player System V1.0<br>
+  Powered by Mars-老刘 & AI
+</div>
+
+<script>
+  let imgBase64 = null;
+
+  // 图片处理 (转Base64 + 预览)
+  function handleFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // 限制大小 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片太大啦，请上传 5MB 以内的图片");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // 预览
+      const img = document.getElementById('previewImg');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+      
+      imgBase64 = e.target.result; 
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 按钮开关
+  function toggleBtn() {
+    const chk = document.getElementById('agreeCheck');
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = !chk.checked;
+  }
+
+  // 提交逻辑
+  async function submitData() {
+    const name = document.getElementById('userName').value.trim();
+    const plat = document.getElementById('platform').value;
+    const social = document.getElementById('socialId').value.trim();
+    const txt = document.getElementById('content').value.trim();
+    const isAgree = document.getElementById('agreeCheck').checked;
+    
+    if (!name) return alert("请填写您的称呼");
+    if (!imgBase64) return alert("请上传截图证明");
+    if (!isAgree) return alert("请阅读并同意授权声明");
+
+    const btn = document.getElementById('submitBtn');
+    btn.innerText = "⏳ 正在上传...";
+    btn.disabled = true;
+
+    // 写入数据库
+    const { error } = await window.sb.from('feedbacks').insert({
+      user_name: name,
+      platform: plat,
+      social_id: social,
+      content: txt,
+      image_data: imgBase64, // 存入 Base64 图片
+      consent: true
+    });
+
+    if (error) {
+      console.error(error);
+      alert("提交失败，请稍后再试 (可能是网络问题)");
+      btn.innerText = "确认提交";
+      btn.disabled = false;
+    } else {
+      // 成功
+      document.getElementById('formPage').classList.add('hidden');
+      document.getElementById('successPage').classList.remove('hidden');
+    }
+  }
+</script>
+
+</body>
+</html>
